@@ -49,6 +49,7 @@ import { loadGymBranding } from "./gym-branding.js";
 import { stadiumDirection } from "./clip/direction.js";
 import { buildGym } from "./gym.js";
 import { buildRollerHall } from "./roller-hall.js";
+import { buildFootballVenue, isFootball } from "./football-venue.js";
 import { nameplate } from "./plate.js";
 import { Player, applyFrame, frameAt, frameCount, CTRL_DT } from "./replay.js";
 import { readBrightness, writeBrightness } from "./brightness.js";
@@ -157,9 +158,9 @@ export function feetPosition(rig, target) {
 }
 
 // A nameplate's height in metres and how far above the trunk it floats. Tuned
-// by eye on the clip page.
-const PLATE_HEIGHT = 0.05;
-const PLATE_LIFT = 0.16;
+// by eye on the clip page; the football page's stamp clears the plate by them.
+export const PLATE_HEIGHT = 0.05;
+export const PLATE_LIFT = 0.16;
 
 /**
  * Where the camera stands and what it looks at, for one frame.
@@ -394,6 +395,9 @@ export async function createViewer(
   // The stage's camera over those lanes (stageCamera); null on a race.
   let broadcast = null;
   let course = null;
+  // A football match's venue (football-venue.js), when the course is one: its
+  // group is the course, and in draw it puts the ball and the keepers where they were.
+  let venue = null;
   let gym = null;
   let judges = null;
   let stage = null;
@@ -410,10 +414,11 @@ export async function createViewer(
   const voice = manual ? null : createStageVoice(loadCalls, { muted: () => isMuted() || hushed() });
   let crowdDirection = stadiumDirection();
 
-  // Whichever set is up, its crowd draws only the seats the camera about to
+  // Whichever sets are up, each crowd draws only the seats the camera about to
   // render can see — the chase camera's and each roller-hall screen feed's
   // alike — and has them all back once that render is done (stadium.js crowd).
-  const crowds = () => [audience, gym, stage].map((set) => set?.crowd).filter(Boolean);
+  // A football venue seats its own behind the goals (football-venue.js).
+  const crowds = () => [audience, gym, stage, venue].map((set) => set?.crowd).filter(Boolean);
   scene.onBeforeRender = (_renderer, _scene, view) => crowds().forEach((one) => one.cull(view));
   scene.onAfterRender = () => crowds().forEach((one) => one.restore());
 
@@ -434,6 +439,8 @@ export async function createViewer(
     if (course) {
       audience?.dispose();
       audience = null;
+      venue?.dispose();
+      venue = null;
       scene.remove(course);
       course = null;
     }
@@ -449,22 +456,28 @@ export async function createViewer(
     const spacing = laneSpacing(event || {});
     sideOffset = cameraSideOffset(entries.length, spacing);
     slopeDeg = event?.slope_deg ?? 0;
-    courseLength = event?.length_m ?? 2;
+    venue = isFootball(event) ? buildFootballVenue(event, reachy, spectators) : null;
+    courseLength = venue?.length ?? event?.length_m ?? 2;
     if (talent) {
       slopeDeg = 0;
       stage = buildTalentStage(event, spectators, reachy, entries.length);
       course = stage.group;
       scene.add(course);
     } else if (event) {
-      course = attachCourse(
-        scene,
-        event,
-        Math.max(1, entries.length),
-        entries.map((entry) => entry.colour),
-      );
+      // A football pitch stands where a race's lanes would, and the stadium,
+      // the hall and the jury are built round it the same way.
+      if (venue) scene.add((course = venue.group));
+      else {
+        course = attachCourse(
+          scene,
+          event,
+          Math.max(1, entries.length),
+          entries.map((entry) => entry.colour),
+        );
+      }
       // The near stand starts a stride beyond where the chase camera stands,
       // clip travel included, so the lens is never inside it.
-      const chase = cameraPose(spec, 0, sideOffset, 0).position[2];
+      const chase = cameraPose(spec ?? venue?.camera, 0, sideOffset, 0).position[2];
       const clearance = chase * TRAVEL_REACH + STAND_CLEARANCE;
       const ground = course.getObjectByName("ground");
       const { width, height } = ground.geometry.parameters;
@@ -478,7 +491,7 @@ export async function createViewer(
         gym = buildGym(courseLength, stadiumBounds.min.z, stadiumBounds.max.z, branding, height);
       }
       scene.add(gym.group);
-      judges = buildJudges(reachy, courseLength, Math.max(1, entries.length) * spacing / 2, gym.sponsorMaps, roller ? 3 : 4);
+      judges = buildJudges(reachy, courseLength, venue?.edge ?? Math.max(1, entries.length) * spacing / 2, gym.sponsorMaps, roller ? 3 : 4);
       scene.add(judges.group);
       if (!slopeDeg) {
         ground.material.dispose();
@@ -533,6 +546,7 @@ export async function createViewer(
         if (node.isMesh) Object.assign(node, { receiveShadow: true, castShadow: true });
       });
       if (talent) placeStageDuck(rig, entry, stage.layout.centre);
+      else if (venue) venue.place(rig);
       else placeLane(rig, z);
       // How the performance sounds (duck-voice.js): the beak follows its triggers and its song.
       const mouth = talent ? mouthTrack(entry.sound, frameCount(entry.trace), entry.lead) : null;
@@ -540,9 +554,12 @@ export async function createViewer(
       scene.add(rig.placer);
 
       // The follow-spot, on the course so it climbs a slope with it (placeMarker).
-      const marker = talent ? new Mesh(shadowGeometry, shadowMaterial) : buildMarker(tier, entry.colour ?? null);
+      // A football match's ducks have none: the ball is what the eye follows there.
+      const marker = talent
+        ? new Mesh(shadowGeometry, shadowMaterial)
+        : venue ? null : buildMarker(tier, entry.colour ?? null);
       if (talent) marker.rotation.x = -Math.PI / 2;
-      else {
+      else if (marker) {
         const shadow = new Mesh(shadowGeometry, shadowMaterial);
         shadow.position.z = -0.001; // Below the ring, above the course, including slopes.
         marker.add(shadow);
@@ -552,7 +569,8 @@ export async function createViewer(
       // no legend over the picture, so the name rides the duck.
       let plate = null;
       if (entry.name) {
-        plate = nameplate(entry.name, `#${marker.material.color.getHexString()}`, "#08080c");
+        const tint = marker ? marker.material.color : new Color(entry.colour ?? 0xfaf8f2);
+        plate = nameplate(entry.name, `#${tint.getHexString()}`, "#08080c");
         plate.sprite.scale.set(PLATE_HEIGHT * plate.ratio, PLATE_HEIGHT, 1);
         scene.add(plate.sprite);
       }
@@ -576,7 +594,8 @@ export async function createViewer(
         Math.max(0, Math.min(1, frameAt(lane.trace, frameCount(lane.trace) - 1)[0] / courseLength)),
       )) });
     }
-    crowdDirection = stadiumDirection({ end: player.duration, progress,
+    // A football crowd follows the play, which it is told: a duck's x says nothing of it.
+    crowdDirection = venue ? venue.direction() : stadiumDirection({ end: player.duration, progress,
       verdict: progress.some(sample => sample.value === 1) ? "pass" : null });
     player.play();
   }
@@ -621,7 +640,10 @@ export async function createViewer(
         lane.plate.sprite.position.set(_trunk.x, _trunk.y + PLATE_LIFT, _trunk.z);
       }
     });
+    // The ball and the keepers, where they were.
+    venue?.pose(lanes.map((lane) => lane.rig), indices[0] ?? 0);
     audience?.pose(seconds, mood);
+    venue?.crowd?.pose(seconds, mood);
     gym?.pose?.(seconds, mood);
     const subjects = lanes.map((lane) =>
       lane.rig.bodies.get("trunk_base").getWorldPosition(lane.gazeTarget),
@@ -638,7 +660,7 @@ export async function createViewer(
       const rise = lead * Math.tan((slopeDeg * Math.PI) / 180);
       const pose = dragPose(stage
         ? broadcast(manual ? seconds : player.time, player.time, camera.aspect, camera.fov)
-        : travelPose(cameraPose(spec ?? gym?.camera, lead, sideOffset, rise), travel),
+        : travelPose(cameraPose(spec ?? venue?.camera ?? gym?.camera, lead, sideOffset, rise), travel),
       SWEEP_TURN * sweepAt((performance.now() - swept) / 1000));
       camera.position.set(...pose.position);
       _target.set(...pose.target);
@@ -675,9 +697,12 @@ export async function createViewer(
   }
 
   /** Where lane `i`'s duck stood in the last frame drawn, as fractions of the
-   * canvas from its top left: what a clip hangs its stamp on. */
-  function spot(i) {
-    lanes[i].rig.bodies.get("trunk_base").getWorldPosition(_trunk).project(camera);
+   * canvas from its top left: what a clip hangs its stamp on. `lift` metres
+   * straight above its trunk instead, for a stamp that must clear its plate. */
+  function spot(i, lift = 0) {
+    lanes[i].rig.bodies.get("trunk_base").getWorldPosition(_trunk);
+    _trunk.y += lift;
+    _trunk.project(camera);
     return { x: (_trunk.x + 1) / 2, y: (1 - _trunk.y) / 2 };
   }
 

@@ -16,6 +16,10 @@ from . import trace as trace_codec
 from .cast import cast_of, load_borrowed
 from .constants import CTRL_DT
 from .evaluate import evaluate
+from .football import load_football
+from .football import record_match as record_football_match
+from .football import round_robin as football_round_robin
+from .football import standings as football_standings
 from .hub_fetch import FetchError, fetch_references
 from .index import ENTRANTS, leaderboard
 from .manifest import ManifestError, all_events, load_event
@@ -106,6 +110,108 @@ def _cmd_score(args) -> int:
         )
         print(f"recorded {record.run_id}")
     return 0
+
+
+def _port(text: str) -> int:
+    """A port to serve on, 1 to 65535: 0 would have the system pick one the page's address
+    cannot name."""
+    try:
+        port = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a port: {text!r}") from None
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError(f"not a port: {port}, give 1 to 65535")
+    return port
+
+
+def _entrants(paths) -> tuple[list, list[str]]:
+    """The policies a command line names, and what to call them: their files' stems,
+    numbered when two share one."""
+    policies = [load_policy(Path(path)) for path in paths]
+    names = [Path(path).stem for path in paths]
+    if len(set(names)) < len(names):
+        names = [f"{name} ({k + 1})" for k, name in enumerate(names)]
+    return policies, names
+
+
+def _football_how(play, on_end) -> str:
+    """How a football play ended, `on_end` naming who kicked off from each end."""
+    at = f"{play.time_s:.2f} s"
+    if play.end == "goal":
+        return f"goal, {on_end[play.scorer]}, at {at}"
+    if play.end == "fault":
+        if play.scorer is None:
+            return f"both faulted at {at}: no goal"
+        return f"{on_end[1 - play.scorer]} faulted at {at}: the goal to {on_end[play.scorer]}"
+    if play.end == "down":
+        return f"both down at {at}: no goal"
+    if play.end == "void":
+        return f"void at {at}: MuJoCo had to reset the simulation"
+    return "the whistle: no goal"
+
+
+def _cmd_football(args) -> int:
+    """`arena football`: two policies a match, three or more a league (arena.football)."""
+    if len(args.onnx) < 2:
+        print("a match takes two policies, or more for a league", file=sys.stderr)
+        return 1
+    if args.watch and len(args.onnx) != 2:
+        print("--watch shows one match: give it two policies", file=sys.stderr)
+        return 1
+    if args.watch:
+        from .workshop.cli import _port_free
+
+        # Before the match is played, not after it.
+        if not _port_free(args.port):
+            print(f"port {args.port} is busy: try --port", file=sys.stderr)
+            return 1
+    game = load_football()
+    policies, names = _entrants(args.onnx)
+    seeds = ", ".join(str(seed) for seed in game.seeds)
+    print(f"{game.title}: seed{'s' if len(game.seeds) > 1 else ''} {seeds}, "
+          f"each played from both ends; the first goal ends a play, the whistle at "
+          f"{game.time_limit_s:g} s")
+    if args.watch:
+        match, recorded = record_football_match(game, *policies)
+        matches = {(0, 1): match}
+    else:
+        matches = football_round_robin(game, policies)
+    for (i, j), match in matches.items():
+        if len(policies) == 2:
+            for played in match.plays:
+                on_end = (names[i], names[j]) if played.ends == 0 else (names[j], names[i])
+                print(f"seed {played.play.seed}  {on_end[0]} | {on_end[1]}  "
+                      f"{_football_how(played.play, on_end)}")
+        a, b = match.goals
+        print(f"{names[i]} {a}–{b} {names[j]}")
+    if len(policies) > 2:
+        width = max(len(name) for name in names)
+        print(f"\n{'#':>2}  {'policy':<{width}}  won  drawn  lost  for  against  points")
+        for rank, row in enumerate(football_standings(names, matches), 1):
+            print(f"{rank:>2}  {row.name:<{width}}  {row.won:>3}  {row.drawn:>5}  "
+                  f"{row.lost:>4}  {row.scored:>3}  {row.conceded:>7}  {row.points:>6}")
+    if args.watch:
+        _watch_football(game, names, match, recorded, args.port, open_browser=not args.no_browser)
+    return 0
+
+
+def _watch_football(game, names, match, recorded, port: int, open_browser: bool) -> None:
+    """The match just played, on the Arena's pitch: football.html on 127.0.0.1 until Ctrl-C."""
+    import threading
+    import webbrowser
+
+    from .football_watch import create_football_app
+    from .web.config import default_frontend
+    from .workshop.cli import serve
+
+    site = default_frontend(Path(__file__).resolve().parent)
+    app = create_football_app(game, names, match, recorded,
+                              site if (site / "football.html").is_file() else None)
+    url = f"http://127.0.0.1:{port}/"
+    print(f"\nWatch it: {url}  (Ctrl-C to close it)", flush=True)
+    if open_browser:
+        threading.Timer(1.0, webbrowser.open, [url]).start()
+    serve(app, port)
 
 
 def _cmd_board(args) -> int:
@@ -347,6 +453,20 @@ def main(argv=None) -> int:
         "--livery", default="classic", help="which colourway to race in"
     )
     score.set_defaults(func=_cmd_score)
+
+    football = subs.add_parser(
+        "football", help="play policies against each other at football: two a match, more a league"
+    )
+    football.add_argument("onnx", nargs="+")
+    football.add_argument(
+        "--watch", action="store_true",
+        help="two policies: then show their match on the Arena's pitch, in a browser",
+    )
+    football.add_argument("--port", type=_port, default=8767,
+                          help="where --watch serves, on 127.0.0.1")
+    football.add_argument("--no-browser", action="store_true", dest="no_browser",
+                          help="with --watch, print the address instead of opening it")
+    football.set_defaults(func=_cmd_football)
 
     board = subs.add_parser("board", help="print a leaderboard")
     board.add_argument("--event", required=True)

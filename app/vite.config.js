@@ -45,15 +45,17 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    // Four pages: the app, the clip the recorder photographs, the plan the
-    // booth's dialogue is timed by, and the workshop (served by `workshop`,
-    // never by the Space's API).
+    // Five pages: the app, the clip the recorder photographs, the plan the
+    // booth's dialogue is timed by, the workshop (served by `workshop`, never
+    // by the Space's API) and the football match (served by `arena football
+    // --watch`, never by the Space's API either).
     rollupOptions: {
       input: {
         main: page("index.html"),
         clip: page("clip.html"),
         plan: page("plan.html"),
         workshop: page("workshop.html"),
+        football: page("football.html"),
       },
     },
   },

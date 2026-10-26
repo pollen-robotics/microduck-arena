@@ -1,0 +1,167 @@
+/* The football page's own pieces (football.html), over the Arena's trackside sheet (race.css):
+   only what the Arena has no component for. Colours from design/tokens.css, the charter's faces
+   only, and the keepers' shells. */
+
+/* The stage is the page: taller than a challenge's, whose board shares the window with it. */
+.football .stage canvas { height: min(68vh, 60vw); }
+
+/* ── on the picture: the play's clock, the stamp, the verdict, the caption ─ */
+
+/* In the quiet the follow key wears: deep ink, a light grey rule, so they read as part of the
+   picture. The clock stands still once the referee has decided. */
+.football-clock {
+  position: absolute;
+  z-index: 1;
+  top: 14px;
+  left: 16px;
+  display: grid;
+  gap: 6px;
+  padding: 8px 12px;
+  color: var(--paper);
+  background: var(--deep-ink);
+  border: 2px solid var(--paper-60);
+}
+.football-clock .mono-label { color: var(--sky); text-transform: uppercase; }
+.football-clock__time { font: 400 1.7rem/1 var(--display); letter-spacing: 0.03em; font-variant-numeric: tabular-nums; }
+
+/* The stamp lands just over the scorer (main.js sets its foot's place on the picture), clear of
+   the duck's head and its plate; a play nobody scored in has it where this puts it, in the middle
+   of the pitch. The charter's stamp, at the size of a picture rather than a page. */
+.football-verdict {
+  position: absolute;
+  z-index: 1;
+  top: 62%;
+  left: 50%;
+  translate: -50% -100%;
+  pointer-events: none;
+}
+.football-verdict .stamp {
+  color: var(--paper);
+  font-size: clamp(2.2rem, 5.6vw, 4.6rem);
+  background: rgba(8, 8, 12, 0.32);
+}
+/* A void keeps the charter's FAIL colour through the rule above. */
+.football-verdict .stamp.stamp-fail { color: var(--magenta); }
+/* The verdict in full, in the top corner the clock leaves: the foot of the picture is the orbit
+   hint's and the follow key's. */
+.football-line {
+  position: absolute;
+  z-index: 1;
+  top: 14px;
+  right: 16px;
+  max-width: min(44%, 30rem);
+  margin: 0;
+  padding: 7px 12px;
+  color: var(--paper);
+  background: var(--deep-ink);
+  border: 2px solid var(--paper-60);
+  font: 400 0.74rem/1.3 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+/* A phone's picture is a third the height of a desk's: smaller, the clock and the verdict share
+   its top edge instead of covering each other and the jury. */
+@media (max-width: 640px) {
+  .football-clock { top: 8px; left: 8px; gap: 3px; padding: 5px 8px; }
+  .football-clock .mono-label { font-size: 0.6rem; letter-spacing: 0.1em; }
+  .football-clock__time { font-size: 1.15rem; }
+  .football-line { top: 8px; right: 8px; padding: 5px 8px; font-size: 0.6rem; letter-spacing: 0.05em; }
+  .football-verdict .stamp { font-size: 1.7rem; }
+  /* Nor is there room for the verdict in full beside the stamp, which it covered: the play's row
+     under the picture says it, so it leaves the picture for screen readers alone. A play that
+     failed to load has no stamp, and keeps its line. */
+  .football-verdict:not([hidden]) ~ .football-line {
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* What the referee last saw — a shot, a save, the ball out, a duck down — at the top of the
+   picture, between the clock and the verdict's corner, in the quiet the clock wears. Its colour
+   is the duck's, or the keeper's for a save (main.js). */
+.football-caption {
+  position: absolute;
+  z-index: 1;
+  top: 14px;
+  left: 50%;
+  translate: -50% 0;
+  margin: 0;
+  padding: 6px 14px;
+  color: var(--paper);
+  background: var(--deep-ink);
+  border: 2px solid var(--paper-60);
+  font: 400 clamp(1.1rem, 2.4vw, 1.7rem)/1 var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* The keepers' names in the note, each in its shell's colour on deep ink: lime on paper is lost. */
+.football-keeper {
+  padding: 0 4px;
+  background: var(--deep-ink);
+  font-weight: 400;
+}
+
+/* ── the column: the score, the plays, the transport ─────────────────── */
+
+/* One column the board's own width: a long policy name gives way to an ellipsis rather than push
+   its goals off the board. */
+.football-score { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.football-score__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.football-score .flip { font-size: 2.1rem; }
+.football-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.football-who__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.86rem; }
+
+/* A policy's letter on its ducks' colour, as on the scoreboard so on every play. */
+.football-swatch {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.55em;
+  height: 1.55em;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  font: 400 0.82rem/1 var(--display);
+}
+.football-score .football-swatch { border-color: var(--paper-60); }
+
+.football-plays__head { margin-top: 6px; }
+.football-plays { list-style: none; margin: -4px 0 0; padding: 0; display: grid; gap: 8px; }
+.football-play {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 5px 10px;
+  padding: 8px 10px;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  cursor: pointer;
+}
+.football-play__seed { grid-column: 1 / -1; color: var(--ink-70); }
+.football-play__ends { display: flex; align-items: center; gap: 4px; }
+.football-play__vs { color: var(--ink-70); font: 400 0.8rem/1 var(--mono); }
+.football-play__how { font-size: 0.8rem; line-height: 1.25; }
+.football-play:hover { background: var(--yellow); }
+/* The play on the stage: lifted off the wall on the sticker's shadow. */
+.football-play[aria-current="true"] {
+  background: var(--yellow);
+  translate: -2px -2px;
+  box-shadow: var(--shadow-sticker-min) var(--shadow-sticker-min) 0 var(--ink);
+}
+.football-play:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+
+.football-transport { display: flex; flex-wrap: wrap; gap: 12px; }
+.football-note { margin: 4px 0 0; font-size: 0.8rem; color: var(--ink-70); }

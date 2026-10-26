@@ -1,0 +1,109 @@
+# Football between two policies (arena/football.py): one duck a side, a ball, a Reachy
+# Mini in each goal. Not an event: this file is not in arena/events/, so it is not on the
+# programme, the boards or the store. `arena football A.onnx B.onnx` plays it from the
+# shell. docs/superpowers/specs/2026-10-24-football-match-design.md says what each number
+# was measured to do.
+id           = "football"
+title        = "Football"
+rig          = "legs"
+kind         = "perpetual"
+# The whistle: a play nobody has scored in by then is goalless.
+time_limit_s = 20.0
+# Every seed is played twice, the two policies swapping ends.
+seeds        = [1, 2, 3]
+
+# What each duck is asked through the settle, and once it is down: to stand still. In
+# play its coach sets vel's forward speed and turn rate every control step, nothing else.
+[command]
+vel  = [0.0, 0.0, 0.0]
+head = [0.0, 0.0, 0.0, 0.0]
+body = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+# Each trunk starts setback_m behind the centre spot, facing the goal it attacks.
+[start]
+keyframe  = "STAND"
+settle_s  = 0.5
+setback_m = 0.45
+
+[start.perturbation]
+joint_rad = 0.01
+yaw_deg   = 2.0
+
+# Boards all round, each corner cut off corner_m along both its sides, and a gap in each
+# end board for a goal's mouth. Tall enough that a struck ball stays in.
+[pitch]
+length_m          = 2.2
+width_m           = 1.5
+corner_m          = 0.25
+board_height_m    = 0.2
+board_thickness_m = 0.05
+
+# Each goal: its mouth in the end board, a pocket depth_m deep behind it, netted on
+# every side but the mouth. The ball wholly over the line is a goal.
+[goal]
+width_m  = 0.6
+height_m = 0.3
+depth_m  = 0.2
+
+# MuJoCo's torsional (spin) and rolling (roll) friction: a hollow ball that rolls on.
+[ball]
+radius_m = 0.035
+mass_kg  = 0.03
+spin     = 0.002
+roll     = 0.002
+
+# A Reachy Mini in each goal, a cylinder to the physics, sliding on a rail along its
+# line. Its axis stands line_m in front of the line, and the rail stops post_gap_m short
+# of each post: there is room beside it. It goes where the ball was lag_s ago, across
+# the goal, no faster than speed_m_s.
+[keeper]
+diameter_m = 0.16
+height_m   = 0.26
+mass_kg    = 1.5
+line_m     = 0.02
+post_gap_m = 0.08
+lag_s      = 0.4
+speed_m_s  = 0.25
+
+# A ball held against a keeper for hold_s is cleared: sent back up the pitch at
+# speed_m_s, within cone_deg of straight on, and that keeper clears nothing more for
+# cooldown_s.
+[save]
+hold_s     = 0.02
+speed_m_s  = 1.2
+cone_deg   = 40.0
+cooldown_s = 1.0
+
+# The assisted strike: a duck on its feet touching the ball, the ball within front_deg
+# of its heading. Within shot_range_m of the goal line it attacks, facing its coach's
+# aim within align_deg, it shoots at the aim at shot_speed_m_s; otherwise, heading
+# within touch_cone_deg of the goal's middle, it touches the ball on along its heading
+# at touch_speed_m_s. Each within noise_deg of that line, at 90 to 110 % of its speed;
+# then nothing more from that duck for its cooldown. Two ducks on the ball: nobody does.
+[strike]
+front_deg        = 60.0
+shot_range_m     = 1.0
+align_deg        = 20.0
+shot_speed_m_s   = 1.2
+shot_cooldown_s  = 0.6
+touch_cone_deg   = 60.0
+touch_speed_m_s  = 0.6
+touch_cooldown_s = 0.4
+noise_deg        = 6.0
+
+# A ball out of play, or stuck for stall_s within jam_m of a duck on its feet, is put
+# down again on the nearest free spot: the centre spot, or one of four at
+# (±spot_x_m, ±spot_y_m); free when more than free_m from both ducks.
+[restart]
+stall_s  = 3.0
+jam_m    = 0.35
+spot_x_m = 0.75
+spot_y_m = 0.45
+free_m   = 0.25
+
+# Every event's fall rule, the same numbers: a duck whose projected gravity's z stays
+# above fall_gravity_z for fall_hold_s is down for the rest of the play, its goal left
+# to its keeper. Both down: the play ends goalless.
+[termination]
+fall_gravity_z = -0.5
+fall_hold_s    = 0.3
