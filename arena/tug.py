@@ -28,6 +28,13 @@ nobody's; in a rating it is the entry's fault, as any fault is there: the refere
 causes one on its own, and a duck that blew the physics up on purpose rated 0.0 cm, above every
 duck that pulls and loses.
 
+A blow-up MuJoCo does not flag is judged the same way: a step that puts a trunk or a point of the
+string off the course (`off_the_course`: past the ring's edge or below the pit's floor by more than
+OFF_COURSE_M) ends the bout for nobody, its frame left out. Unjudged, one such step flung the string
+23 m and the west trunk 1.3 m under the canvas, every number still finite, and the pit read a win
+with the marker 12.8 m out: a 1378.6 cm bout and a 405.4 cm rating
+(pollen-robotics/microduck-arena#6).
+
 A trace frame is a runner frame: trunk position (0:3), trunk quaternion w, x, y, z (3:7), then
 the joint angles.
 """
@@ -45,6 +52,7 @@ from .policy import PolicyError, load_policy
 from .runner import _reset_by_mujoco, _start
 
 PIT_DROP_M = 0.05  # a trunk below z = -PIT_DROP_M is in the pit
+OFF_COURSE_M = 0.5  # how far past the ring's edge, or below the pit's floor, no step of a real bout reaches
 FAULT_PITS = 2  # a fault scores this many pit bonuses: beyond any bout played out (a pit and 65 cm of marker)
 SIDES = ("west", "east")
 STRING_POINTS = STRING_SEGMENTS + 1  # a recorded string frame: its points, west to east
@@ -58,6 +66,15 @@ def marker_x(string: np.ndarray) -> np.ndarray:
 
 def in_pit(frame: np.ndarray) -> bool:
     return bool(frame[2] < -PIT_DROP_M)
+
+
+def off_the_course(course, trunks: np.ndarray, string: np.ndarray) -> bool:
+    """Is a trunk, (2, 3), or a point of the string, (STRING_POINTS, 3), where no real bout goes:
+    more than OFF_COURSE_M past the ring's edge in x or y, above it, or below the pit's floor?"""
+    p = np.concatenate([trunks, string])
+    reach = course.ring_m / 2 + OFF_COURSE_M
+    return bool((np.abs(p[:, 0:2]) > reach).any() or (p[:, 2] < -course.pit_depth_m - OFF_COURSE_M).any()
+                or (p[:, 2] > reach).any())
 
 
 def _verdict(trace: np.ndarray, string: np.ndarray, final: bool) -> tuple[int | None, str] | None:
@@ -134,6 +151,11 @@ def run_bout(manifest: Manifest, west, east, seed: int, model=None) -> BoutOutco
             )
         sim.record(frames[:, step])
         sim.points(string[step])
+        if off_the_course(manifest.course, frames[:, step, 0:3], string[step]):  # a blow-up MuJoCo did not flag
+            return BoutOutcome(
+                seed, None, "reset", (step + 1) * CTRL_DT, frames[:, :step].copy(), settle,
+                string[:step].copy(), string_settle,
+            )
         faults = _faults(sim)
         verdict = ((faults.index(True) if faults.count(True) == 1 else None), "fault") if any(faults) else \
             _verdict(frames[:, : step + 1], string[: step + 1], final=step == steps - 1)

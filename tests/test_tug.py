@@ -207,6 +207,31 @@ def test_a_solver_explosion_ends_a_bout_for_nobody_and_its_frame_is_left_out(mon
     np.testing.assert_array_equal(out.trace, whole.trace[:, :10])
 
 
+def test_a_step_off_the_course_ends_a_bout_for_nobody_and_its_frame_is_left_out(monkeypatch):
+    """A blow-up MuJoCo does not flag (pollen-robotics/microduck-arena#6): a trunk or a string point
+    off the course is judged as a reset, never read by the pit or the marker."""
+    course, trunks = TUG.course, np.array([[-0.6, 0.0, 0.1], [0.6, 0.0, 0.1]])
+    string = np.linspace(trunks[0], trunks[1], STRING_POINTS)
+    assert not tug.off_the_course(course, trunks, string)
+    in_the_pit = trunks.copy()
+    in_the_pit[0] = (-0.05, 0.0, -course.pit_depth_m)                        # down on the pit's floor: in play
+    assert not tug.off_the_course(course, in_the_pit, string)
+    flung = string.copy()
+    flung[MIDDLE] = (12.79, 0.0, 0.5)                                       # the string of issue #6's last step
+    assert tug.off_the_course(course, trunks, flung)
+    sunk = trunks.copy()
+    sunk[0] = (-1.07, 0.32, -1.34)                                          # its west trunk, under the canvas
+    assert tug.off_the_course(course, sunk, string)
+    whole = run_bout(SHORT, _ZeroPolicy(), _ZeroPolicy(), 1)
+    assert not any(tug.off_the_course(course, whole.trace[:, k, 0:3], whole.string[k]) for k in range(whole.trace.shape[1]))
+    calls = iter(range(1_000_000))
+    monkeypatch.setattr(tug, "off_the_course", lambda *a: next(calls) == 10)
+    out = run_bout(SHORT, _ZeroPolicy(), _ZeroPolicy(), 1)
+    assert (out.loser, out.how, out.trace.shape, out.string.shape) == (None, "reset", (2, 10, 21), (10, 17, 3))
+    np.testing.assert_array_equal(out.trace, whole.trace[:, :10])
+    assert bout_status(out, 1) == "fault" and bout_score_cm(out, 1, 100.0) == pytest.approx(-200.0)
+
+
 def bout_trace(x, pit=()):
     """One frame of a bout whose marker stands x m east of the centre line; the ducks in `pit` below the floor."""
     trace = np.array([[frame((-0.6 + x, 0, 0.1), WEST)], [frame((0.6 + x, 0, 0.1), EAST)]])
