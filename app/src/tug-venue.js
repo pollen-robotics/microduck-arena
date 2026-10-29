@@ -20,7 +20,7 @@ import { crowd } from "./stadium.js";
 // The ring at a duck's scale (a wrestler's ring stands 1.2 m for 1.8 m wrestlers; a duck is 25 cm):
 // its size, ropes and posts are the physics' own, served with the event; its canvas stands RING_RISE
 // over the hall's floor, its apron APRON past the ropes.
-const RING_RISE = 0.14;
+export const RING_RISE = 0.14;
 export const APRON = 0.1;
 // The ringside floor between the apron and the barricade, the barricade's height and thickness.
 const RINGSIDE = 0.9;

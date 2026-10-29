@@ -11,6 +11,7 @@ import { renderRun } from "./run.js";
 import { parseRoute } from "./router.js";
 import { renderVote } from "./vote.js";
 import { renderGuides } from "./guides.js";
+import { HALLOWEEN, decoratePage } from "./halloween.js";
 
 const root = document.querySelector("#app");
 const state = { events: null, viewer: null, teardown: null };
@@ -76,5 +77,6 @@ async function show() {
   }
 }
 
+if (HALLOWEEN) decoratePage();
 addEventListener("hashchange", show);
 show();

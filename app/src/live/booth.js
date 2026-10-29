@@ -26,9 +26,10 @@ import {
   WebGLRenderer,
 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { HALLOWEEN, dress, hauntBooth } from "../halloween.js";
 import { applyFrame } from "../replay.js";
 import { STAND, TRUNK_HEIGHT, attachMeshes, buildRigTree, jawPivot, setJoint } from "../rig.js";
-import { loadAssets } from "../viewer.js";
+import { loadAssets, loadGlb } from "../viewer.js";
 import { BOOTH_TURN, direct } from "./direction.js";
 import { poseAt } from "./score.js";
 import { SCREEN_PX, drawCupScreen } from "./screen.js";
@@ -58,7 +59,11 @@ function standFrame(x) {
 const toY = ([x, y, z]) => [x, z, -y];
 
 export async function createBooth(canvas) {
-  const { kinematics, geometries } = await loadAssets("legs");
+  const [{ kinematics, geometries }, wardrobe] = await Promise.all([
+    loadAssets("legs"),
+    // Halloween week: Peter and Ray in costume, the set haunted.
+    HALLOWEEN ? loadGlb("halloween.glb") : null,
+  ]);
   const renderer = new WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, PIXEL_RATIO_CAP));
   renderer.toneMapping = ACESFilmicToneMapping;
@@ -106,6 +111,8 @@ export async function createBooth(canvas) {
   const set = buildSet({ screen });
   const screenMap = set.getObjectByName("cup screen").material[3].map;
   root.add(set);
+  const haunt = wardrobe ? hauntBooth(wardrobe, set.getObjectByName("pegboard")) : null;
+  if (haunt) set.add(haunt.group);
   const floor = new Mesh(new PlaneGeometry(1.3, 0.9), new MeshLambertMaterial({ map: checkerboard() }));
   floor.rotation.z = BOOTH_TURN;
   floor.position.set(-0.04, 0.069, 0.0001);
@@ -127,6 +134,7 @@ export async function createBooth(canvas) {
     Object.entries(SEATS).map(([speaker, seat]) => {
       const rig = buildRigTree(kinematics);
       attachMeshes(rig, kinematics, geometries, { livery: seat.livery });
+      if (wardrobe) dress(rig, wardrobe, speaker);
       rig.placer.traverse((object) => {
         if (object.isMesh) object.castShadow = object.receiveShadow = true;
       });
@@ -180,6 +188,7 @@ export async function createBooth(canvas) {
         }
         actor.jaw.rotation.y = pose.mouth * JAW_OPEN;
       }
+      haunt?.pose(ms / 1000);
       renderer.render(scene, camera);
       return plan.captions.find((c) => c.start_ms <= ms && ms < c.end_ms) ?? null;
     },

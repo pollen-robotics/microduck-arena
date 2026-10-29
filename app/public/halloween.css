@@ -1,0 +1,258 @@
+/* Halloween week, 2026: the pages' decorations, all under html.halloween, which
+ * halloween.js sets until the week is out. Everything hangs in the margins and
+ * in the gaps between the strips, never over what a page says; nothing takes a
+ * click, the layer of what flies is aria-hidden, and a visitor who asked for
+ * less motion gets the decorations standing still. */
+
+/* ── A witch's hat on the duck of the mark, in the strip and on the cover ──── */
+
+/* The hat drawn already tipped, its brim's middle at 50% 78% of the picture,
+   sized and placed in fractions of the head it sits on (W wide): 0.62 W wide,
+   0.11 W in from the head's left and 0.317 W above its top, the brim on the
+   crown and clear of the eye. */
+.halloween .club-brand { position: relative; }
+.halloween .club-brand::before,
+.halloween .duck::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  aspect-ratio: 58 / 51;
+  pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='1 0 58 51'><g transform='rotate(-14 30 40)'><ellipse cx='30' cy='40' rx='28' ry='6' fill='%234B2F8F' stroke='%23101018' stroke-width='2'/><path d='M18 39C22 26 26 14 34 6C38 3 44 4 48 8C42 8 39 12 38 18L42 39Z' fill='%234B2F8F' stroke='%23101018' stroke-width='2' stroke-linejoin='round'/><path d='M19.4 33H40.8L41.6 38H18.2Z' fill='%23FF7A2F' stroke='%23101018' stroke-width='1.6'/><rect x='26.5' y='33' width='7' height='5' fill='none' stroke='%23FFD23F' stroke-width='1.6'/></g></svg>") center / contain no-repeat;
+}
+/* The strip's head is the 46 px picture alone, centred down the brand: its top
+   is 13.6 px above the brand's middle. */
+.halloween .club-brand::before { left: 5.1px; top: calc(50% - 28.2px); width: 28.5px; }
+/* The cover's head is a .duck the size of its closed picture (H = 0.5925 W).
+   On hover the open picture shows, tipped and lifted about its own centre —
+   0.5 W across and 0.362 W down — so the hat turns about that same point. */
+.halloween .duck::before {
+  left: 11%;
+  top: -53.6%;
+  width: 62%;
+  transform-origin: 62.9% 124.6%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .halloween .duck::before { transition: rotate 140ms ease, translate 140ms ease; }
+  .halloween .duck:hover::before { rotate: calc(-1 * var(--rotate-4-0)); translate: 0 -4px; }
+}
+
+/* ── HAPPY HALLOWEEN, a sticker beside the mark ──────────────────────────── */
+
+.halloween .club-brand::after,
+.halloween .masthead-lockup::after {
+  content: "Happy Halloween";
+  padding: 4px 10px;
+  border: 2px solid var(--ink);
+  background: var(--orange);
+  color: var(--ink);
+  font-family: var(--type-sticker-family);
+  font-size: var(--type-sticker-size);
+  line-height: var(--type-sticker-line);
+  letter-spacing: var(--type-sticker-tracking);
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sticker-min) var(--shadow-sticker-min) 0 var(--paper);
+  rotate: -4deg;
+  pointer-events: none;
+}
+.halloween .masthead-lockup { position: relative; }
+.halloween .masthead-lockup::after {
+  position: absolute;
+  right: 0;
+  bottom: -10px;
+  translate: 40% 0;
+  rotate: 5deg;
+  font-size: clamp(0.72rem, 1.4vw, 1rem);
+}
+@media (max-width: 760px) {
+  .halloween .club-brand::after { display: none; }
+  .halloween .masthead-lockup::after { translate: 0 60%; }
+}
+
+/* ── A garland of lanterns and bats under the strip, the yellow band, or the
+      chequer a player's page and the guides hang under their strip ───────── */
+
+.halloween header.signage:not(.signage--pinned),
+.halloween .flock-band { position: relative; }
+.halloween header.signage:not(.signage--pinned)::after,
+.halloween .flock-band::after,
+.halloween .page-checker::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 30px;
+  pointer-events: none;
+  z-index: 1;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 30'><path d='M0 2Q70 16 140 2' fill='none' stroke='%23101018' stroke-width='1.5'/><g id='p'><path d='M35 7v4' stroke='%23101018' stroke-width='1.2'/><path d='M35 11v-1.6' stroke='%233F6B00' stroke-width='2.4'/><ellipse cx='35' cy='17' rx='8' ry='6.2' fill='%23FF7A2F' stroke='%23101018' stroke-width='1.4'/><path d='M31.2 16.6L33 14L34.8 16.6ZM35.2 16.6L37 14L38.8 16.6ZM30.6 19Q35 22.4 39.4 19Q35 20.4 30.6 19Z' fill='%23101018'/></g><use href='%23p' x='70'/><path d='M70 9v2' stroke='%23101018' stroke-width='1.2'/><g transform='translate(55.6 9) scale(0.45)'><path d='M32 6C29 6 28 8 28 10C24 4 16 2 2 4C8 7 10 11 9 16C13 13 18 14 20 18C22 14 26 14 28 16C29 19 30 20 32 21C34 20 35 19 36 16C38 14 42 14 44 18C46 14 51 13 55 16C54 11 56 7 62 4C48 2 40 4 36 10C36 8 35 6 32 6ZM29 7L28 1L31 5ZM35 7L36 1L33 5Z' fill='%23101018'/></g></svg>") 0 0 / 140px 30px repeat-x;
+}
+.halloween .flock-band::after { top: calc(100% + 3px); }
+.halloween header.signage:has(+ .page-checker)::after { display: none; }
+/* A publication fills one screen to its edges: no room for a garland there. */
+.halloween:has(main.run) header.signage::after { display: none; }
+
+/* ── A graveyard along the top of the footer ─────────────────────────────── */
+
+.halloween footer.signage-end { position: relative; }
+.halloween:has(main.run) footer.signage-end::before { display: none; }
+.halloween footer.signage-end::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 28px;
+  pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 28'><g fill='%2308080C'><rect y='26' width='220' height='2'/><path d='M14 28V15a9 9 0 0 1 18 0v13zM60 28V11h-6V7h6V2h4v5h6v4h-6v17zM96 28V20a6 6 0 0 1 12 0v8zM176 28V13a8 8 0 0 1 16 0v15zM124 28l2-6 2 6zM130 28l2-8 2 8zM200 28l2-5 2 5zM206 28l2-7 2 7z'/></g><ellipse cx='150' cy='22.5' rx='7' ry='5.3' fill='%23FF7A2F' stroke='%2308080C' stroke-width='1.4'/><path d='M150 17.4v-2.2' stroke='%233F6B00' stroke-width='2.2'/><path d='M146.6 22.2L148.1 20L149.6 22.2ZM150.4 22.2L151.9 20L153.4 22.2ZM146.2 24.2Q150 27 153.8 24.2Q150 25.4 146.2 24.2Z' fill='%2308080C'/></svg>") 0 100% / 220px 28px repeat-x;
+}
+
+/* ── Cobwebs in the top corners of the margins, where the window is wide; not
+      on a warm hall, whose own pseudo-elements lay its paper ─────────────── */
+
+@media (min-width: 1400px) {
+  .halloween .hall:not(.hall--warm)::before,
+  .halloween .hall:not(.hall--warm)::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 130px;
+    height: 130px;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.45;
+    background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><path d='M0 0L118 0M0 0L114 31M0 0L100 63M0 0L76 90M0 0L44 109M0 0L0 118M26 0Q22 3 25 7Q20 9 22 14Q17 14 17 20Q11 19 10 24Q4 22 0 26M50 0Q42 6 48 13Q39 17 42 26Q32 28 32 38Q22 36 19 46Q8 41 0 50M76 0Q64 8 73 20Q59 26 64 40Q49 42 49 58Q33 55 28 70Q12 63 0 76M102 0Q86 11 99 26Q80 35 87 54Q65 57 66 78Q45 74 38 95Q16 85 0 102' fill='none' stroke='%23101018' stroke-width='1'/></svg>") 0 0 / contain no-repeat;
+  }
+  /* From the column's edge out to the window's. */
+  .halloween .hall:not(.hall--warm)::before { left: calc((100% - 100vw) / 2); }
+  .halloween .hall:not(.hall--warm)::after { right: calc((100% - 100vw) / 2); scale: -1 1; }
+}
+
+/* ── What flies: bats crossing now and then, a spider down its thread ────── */
+
+.haunt {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* The channel is a broadcast, its booth haunted already. */
+.halloween:has(.live) .haunt { display: none; }
+
+/* A bat seen from the front: two wings hinged at its shoulders beating round
+   its body, the body bobbing up on each downstroke. Three movements, one an
+   element: across the window at an even pace (.haunt-bat), up and down in long
+   swoops banking into each (.haunt-flight), and the beat (.haunt-flap). */
+.haunt-bat {
+  position: absolute;
+  left: 0;
+  translate: -90px 0;
+  animation: haunt-cross 40s linear infinite;
+}
+.haunt-bat:nth-child(1) { top: 22vh; scale: 1.2; animation-delay: 3s; }
+.haunt-bat:nth-child(2) { top: 12vh; scale: 0.7; animation-duration: 47s; animation-delay: 12s; animation-direction: reverse; }
+.haunt-bat:nth-child(3) { top: 34vh; scale: 0.55; animation-duration: 55s; animation-delay: 26s; }
+.haunt-flight {
+  display: block;
+  animation: haunt-swoop 1.4s ease-in-out infinite alternate;
+}
+.haunt-bat:nth-child(2) .haunt-flight { animation-duration: 1.1s; }
+.haunt-flap {
+  position: relative;
+  display: block;
+  width: 60px;
+  height: 26px;
+  animation: haunt-bob 0.15s ease-in-out infinite alternate;
+}
+.haunt-flap > i {
+  position: absolute;
+  top: 2px;
+  width: 32px;
+  height: 22px;
+  background: center / contain no-repeat;
+  animation: 0.15s ease-in-out infinite alternate;
+}
+.haunt-flap > .haunt-wing-left {
+  left: 0;
+  transform-origin: 100% 30%;
+  animation-name: haunt-beat-left;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 22'><path d='M32 5C24 1 12 0 1 4C4 7 5 10 4 15C8 12 11 13 13 17C15 13 19 13 21 17C23 13 27 13 32 15Z' fill='%23101018' stroke='%23FAF8F2' stroke-width='0.8' stroke-linejoin='round'/><path d='M31 7L5 5M31 9L13 14M31 11L21 15' stroke='%233a3a46' stroke-width='0.7'/></svg>");
+}
+.haunt-flap > .haunt-wing-right {
+  left: 28px;
+  transform-origin: 0 30%;
+  animation-name: haunt-beat-right;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 22'><path d='M0 5C8 1 20 0 31 4C28 7 27 10 28 15C24 12 21 13 19 17C17 13 13 13 11 17C9 13 5 13 0 15Z' fill='%23101018' stroke='%23FAF8F2' stroke-width='0.8' stroke-linejoin='round'/><path d='M1 7L27 5M1 9L19 14M1 11L11 15' stroke='%233a3a46' stroke-width='0.7'/></svg>");
+}
+.haunt-flap > .haunt-body {
+  top: 0;
+  left: 22px;
+  z-index: 1;
+  width: 16px;
+  animation: none;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 22'><path d='M3 8L2 0L7 4ZM13 8L14 0L9 4Z' fill='%23101018' stroke='%23FAF8F2' stroke-width='0.8' stroke-linejoin='round'/><ellipse cx='8' cy='14.5' rx='4.6' ry='6.5' fill='%23101018' stroke='%23FAF8F2' stroke-width='0.8'/><circle cx='8' cy='7.5' r='4.6' fill='%23101018' stroke='%23FAF8F2' stroke-width='0.8'/><circle cx='6.2' cy='7' r='1.2' fill='%23FF7A2F'/><circle cx='9.8' cy='7' r='1.2' fill='%23FF7A2F'/><path d='M6.6 10.2L7.2 11.8L7.8 10.2ZM8.2 10.2L8.8 11.8L9.4 10.2Z' fill='%23FAF8F2'/></svg>");
+}
+
+@keyframes haunt-cross {
+  0% { translate: -90px 0; }
+  30%, 100% { translate: calc(100vw + 90px) 0; }
+}
+@keyframes haunt-swoop {
+  from { translate: 0 -26px; rotate: 9deg; }
+  to { translate: 0 26px; rotate: -7deg; }
+}
+@keyframes haunt-bob {
+  from { transform: translateY(3px); }
+  to { transform: translateY(-3px); }
+}
+/* Up: the tips raised and seen edge-on, shorter; down: spread, and lower. */
+@keyframes haunt-beat-left {
+  from { rotate: 48deg; scale: 0.72 1; }
+  to { rotate: -30deg; scale: 1 0.9; }
+}
+@keyframes haunt-beat-right {
+  from { rotate: -48deg; scale: 0.72 1; }
+  to { rotate: 30deg; scale: 1 0.9; }
+}
+
+/* In the right margin, where the window is wide enough to have one. */
+.haunt-spider {
+  position: absolute;
+  top: 0;
+  right: calc((100vw - var(--space-content-column)) / 4 - 17px);
+  width: 34px;
+  height: 120px;
+  animation: haunt-drop 6s ease-in-out infinite alternate;
+}
+.haunt-spider::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 28px;
+  left: 50%;
+  width: 1px;
+  background: #8a8a90;
+}
+.haunt-spider::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 34px;
+  height: 34px;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><g stroke='%23101018' stroke-width='2.4' fill='none' stroke-linecap='round'><path d='M15 18L7 11L3 15M14 21L5 20L2 25M15 24L7 28L5 33M16 26L11 33L11 38M25 18L33 11L37 15M26 21L35 20L38 25M25 24L33 28L35 33M24 26L29 33L29 38'/></g><circle cx='20' cy='13' r='5' fill='%23101018' stroke='%23FAF8F2' stroke-width='0.8'/><ellipse cx='20' cy='23' rx='7.5' ry='8' fill='%23101018' stroke='%23FAF8F2' stroke-width='0.8'/><circle cx='18.2' cy='12.4' r='1.3' fill='%23FF7A2F'/><circle cx='21.8' cy='12.4' r='1.3' fill='%23FF7A2F'/></svg>") center / contain no-repeat;
+}
+@keyframes haunt-drop {
+  from { height: 110px; }
+  to { height: 190px; }
+}
+@media (max-width: 1399px) {
+  .haunt-spider { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .haunt-bat { display: none; }
+  .haunt-spider { animation: none; height: 150px; }
+}

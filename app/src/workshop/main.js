@@ -2,6 +2,7 @@
 // browser's back button works. Each page mounts itself and says how to leave it (its polls, its
 // viewer) and how to redraw the account when that changes.
 
+import { HALLOWEEN, decoratePage } from "../halloween.js";
 import { dress } from "../router.js";
 import { createAccount } from "./account.js";
 import * as api from "./api.js";
@@ -50,6 +51,7 @@ async function show() {
   }
 }
 
+if (HALLOWEEN) decoratePage();
 window.addEventListener("hashchange", show);
 account.check(); // not awaited: the Hub may be slow, and no page waits for it
 show();

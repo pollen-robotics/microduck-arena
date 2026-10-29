@@ -53,7 +53,8 @@ import { nameplate } from "./plate.js";
 import { Player, applyFrame, frameAt, frameCount, CTRL_DT } from "./replay.js";
 import { readBrightness, writeBrightness } from "./brightness.js";
 import { buildString, stringAt, tugDucks, tugPose, tugSpan, tugString } from "./tug.js";
-import { buildTugVenue } from "./tug-venue.js";
+import { RING_RISE, buildTugVenue } from "./tug-venue.js";
+import { HALLOWEEN, dress, hauntRing, hauntStage, hauntTrack } from "./halloween.js";
 import { SWEEP_TURN, sweepAt } from "./sweep.js";
 
 // The sun supplies shape and the shadows; the room only soft reflections. Much
@@ -337,7 +338,7 @@ const CROWD_MODEL = "microduck-crowd.glb";
 // a walking race and a roller race.
 const glbs = new Map();
 
-function loadGlb(model) {
+export function loadGlb(model) {
   if (!glbs.has(model)) {
     glbs.set(
       model,
@@ -380,13 +381,15 @@ export async function createViewer(
   // mix legs and rollers, each duck on its own, so both rigs are loaded. The
   // crowd is always on foot, in its own lighter model. A sock heist's page, its `lights`, loads
   // its giant's nest and socks and its playground too.
-  const [legs, rollers, spectators, reachy, branding, heistVenue] = await Promise.all([
+  const [legs, rollers, spectators, reachy, branding, heistVenue, wardrobe] = await Promise.all([
     loadAssets("legs"),
     loadAssets("rollers"),
     loadAssets("legs", CROWD_MODEL),
     loadGlb("reachy-mini/reachy-mini.glb"),
     loadGymBranding(),
     lights ? loadHeistVenue() : null,
+    // Halloween's costumes and props are the pages' alone: a clip never wears them.
+    HALLOWEEN && !manual ? loadGlb("halloween.glb") : null,
   ]);
   const rigs = { legs, rollers };
 
@@ -492,6 +495,8 @@ export async function createViewer(
   // The stadium's crowd, rebuilt with the course: posed in draw, disposed
   // with the course in clearScene.
   let audience = null;
+  // Halloween's props round whichever venue is up, posed in draw.
+  let haunt = null;
   let sideOffset = 1.15;
   let slopeDeg = 0;
   // Where the chase looks along the track with nobody on it, and where its finish line is.
@@ -514,6 +519,8 @@ export async function createViewer(
   scene.onAfterRender = () => crowds().forEach((one) => one.restore());
 
   function clearScene() {
+    haunt?.group.removeFromParent();
+    haunt = null;
     stage?.dispose();
     stage = null;
     venue?.dispose();
@@ -582,10 +589,12 @@ export async function createViewer(
       stage = buildTalentStage(event, spectators, reachy, entries.length);
       course = stage.group;
       scene.add(course);
+      if (wardrobe) haunt = hauntStage(wardrobe, stage.layout);
     } else if (tugged) {
       venue = buildTugVenue(event, spectators, reachy, branding, clearance);
       course = venue.group;
       scene.add(course);
+      if (wardrobe) haunt = hauntRing(wardrobe, event.ring_m / 2, -RING_RISE);
       if (entries.length) {
         tug = { rope: buildString(), string: tugString(bout, entries[0].lead) };
         course.add(tug.rope.group);
@@ -594,6 +603,8 @@ export async function createViewer(
       course = attachCourse(scene, event, Math.max(1, laneCount), entries.map((entry) => entry.colour));
       const ground = course.getObjectByName("ground");
       const { width, height } = ground.geometry.parameters;
+      // A sock heist's camera stands behind its ducks and above them: its bats keep to the sky.
+      if (wardrobe) haunt = hauntTrack(wardrobe, courseLength, height, event.lights ? 1.45 : 0.75);
       const roller = event.id === "roller-sprint-2m";
       if (event.lights) {
         // A sock heist races in its playground, each side at the edge of the lanes drawn: no stands.
@@ -624,6 +635,7 @@ export async function createViewer(
         ground.material = gym.floorMaterial(width, height);
       }
     }
+    if (haunt) scene.add(haunt.group);
     key.castShadow = Boolean(gym);
     if (gym) {
       // Whatever of the stadium stands in the sun's frame casts too; the room's
@@ -659,12 +671,11 @@ export async function createViewer(
       // Painting the whole duck one lane colour erased every seam between shell,
       // legs and head and left an unreadable silhouette. A ghost is DIMMED
       // instead — the treatment the simulator gives its multiplayer peers.
-      attachMeshes(rig, kinematics, geometries, {
-        livery: entry.livery ?? "classic",
-        // A rival on a publication page is a real entry, drawn solid: an
-        // explicit `opacity` overrides what the tier would give it.
-        opacity: entry.opacity ?? (tier === "ghost" ? GHOST_OPACITY : 1),
-      });
+      // A rival on a publication page is a real entry, drawn solid: an
+      // explicit `opacity` overrides what the tier would give it.
+      const opacity = entry.opacity ?? (tier === "ghost" ? GHOST_OPACITY : 1);
+      attachMeshes(rig, kinematics, geometries, { livery: entry.livery ?? "classic", opacity });
+      if (wardrobe) dress(rig, wardrobe, entry.livery ?? "classic", opacity);
       // The same spacing buildCourse used: the ducks must stand between their
       // own walls, not between someone else's.
       const z = laneOffsetZ(i, entries.length, spacing);
@@ -800,6 +811,7 @@ export async function createViewer(
     judges?.pose(seconds, subjects);
     giant?.pose(lightAt(timetable, turnS, player.time - heistLead).facing);
     giant?.dive(divers, player.time - divedAt);
+    haunt?.pose(seconds);
     stage?.pose(seconds, subjects, mood);
     venue?.pose(seconds, subjects, mood);
 
