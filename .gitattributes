@@ -86,3 +86,4 @@ app/public/robot/reachy-mini/reachy-mini.glb filter=lfs diff=lfs merge=lfs -text
 app/public/cards/*.webp filter=lfs diff=lfs merge=lfs -text
 app/public/venue/*.glb filter=lfs diff=lfs merge=lfs -text
 docs/thumbnail.png filter=lfs diff=lfs merge=lfs -text
+app/public/robot/halloween.glb filter=lfs diff=lfs merge=lfs -text
