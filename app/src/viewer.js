@@ -621,6 +621,7 @@ export async function createViewer(
       // A sock heist has its giant past the line, and no judges.
       if (event.lights) {
         giant = buildGiant(rigs.legs, heistVenue, courseLength, Math.max(1, laneCount) * spacing / 2);
+        if (wardrobe) dress(giant.rig, wardrobe, "giant");
         scene.add(giant.group);
         heistSeed = entries[0]?.traceSeed;
         timetable = timetableOf(event, heistSeed);

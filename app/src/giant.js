@@ -175,6 +175,7 @@ export function buildGiant({ kinematics, geometries }, { nest, socks }, length, 
   const [round] = rig.joints.get("head_yaw").range;
   return {
     group,
+    rig,
     /** Turn the head `facing` of the way round, 0 away from the lanes and 1 facing them. */
     pose(facing) {
       setJoint(rig, "head_yaw", facing * round);

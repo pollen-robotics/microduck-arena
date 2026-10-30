@@ -214,6 +214,7 @@ def paints():
         "patch": material("monster patch", (0.12, 0.09, 0.05), 0.95),
         "spark": material("spark", (0.4, 0.9, 1.0), 0.5, emission=(0.4, 0.9, 1.0), strength=4.0),
         "bone": material("bone", (0.72, 0.65, 0.5), 0.7),
+        "fang": material("fang", (0.9, 0.88, 0.8), 0.25),
         "glass": glass("glass", (0.75, 0.85, 0.9)),
         "potion green": material(
             "potion green", (0.2, 1.0, 0.1), 0.3, emission=(0.2, 1.0, 0.08), strength=1.6
@@ -629,6 +630,54 @@ def vampire(duck, p):
     }
 
 
+def count(duck, p):
+    """Sock Heist's giant: Count Dracula — two fangs over its lower beak, a cape lined blood red down
+    to the floor it sits on, a tall collar behind its head, piped red so it reads from behind."""
+    cx = -0.006
+
+    def cape(s, t, inset):
+        # Wider and longer than a racer's vampire cape: it drapes over the folded legs to the nest.
+        theta = math.radians(55 + 250 * t)
+        hem = 0.005 * math.sin(theta * 7) * s**3
+        rx = 0.05 + 0.045 * s**1.2 - inset + hem
+        ry = 0.044 + 0.05 * s - inset + hem
+        z = 0.172 - 0.102 * s + 0.004 * math.cos(theta * 7) * s**3
+        return (cx + rx * math.cos(theta), ry * math.sin(theta), z)
+
+    def collar(s, t, inset):
+        # Two points either side of the head, clear of it as it turns round; low between them, under
+        # the fangs, so a camera behind the giant still sees its whole head over it.
+        theta = math.radians(125 + 110 * t)
+        flare = 0.05 + 0.05 * s**1.4 - inset
+        z = 0.164 + s * (0.032 + 0.05 * abs(2 * t - 1) ** 2.5)
+        return Vector((cx + flare * 1.05 * math.cos(theta), flare * math.sin(theta), z))
+
+    piping = sweep([collar(1, k / 40, 0) for k in range(41)], 0.0018, 8)
+    # Hung from the upper beak's edge in front of the lower beak (the jaw, 6.87 cm forward), so they
+    # show over it as a vampire's do over its lip.
+    fangs = bmesh.new()
+    for side in (1, -1):
+        hit = duck.head.ray_cast(Vector((0.068, 0.017 * side, 0.18)), Vector((0, 0, 1)), 0.1)
+        root = Vector((0.0705, 0.017 * side, hit[0].z))
+        merge(
+            fangs,
+            place(
+                lathe([(0.0032, 0.001), (0.0026, -0.008), (0, -0.018)], 12),
+                Matrix.Translation(root),
+            ),
+        )
+    return {
+        HEAD: [mesh_object("count fangs", fangs, p["fang"])],
+        TRUNK: [
+            sheet(12, 48, lambda s, t: cape(s, t, 0), p["cape"], "count cape"),
+            sheet(12, 48, lambda s, t: cape(s, t, 0.0012), p["lining"], "count lining"),
+            sheet(8, 40, lambda s, t: collar(s, t, 0), p["cape"], "count collar"),
+            sheet(8, 40, lambda s, t: collar(s, t, 0.0012), p["lining"], "count collar lining"),
+            mesh_object("count collar piping", piping, p["lining"]),
+        ],
+    }
+
+
 def witch(duck, p):
     """Lavender: a crooked pointed hat, orange band, gold buckle."""
     tilt = (
@@ -1021,7 +1070,7 @@ def scientist(duck, p):
     return {HEAD: [hair, strap, *goggles], TRUNK: on_trunk}
 
 
-# Which costume each livery wears, and the commentators' own.
+# Which costume each livery wears, and the commentators' and Sock Heist's giant's own.
 COSTUMES = {
     "classic": mummy,
     "charcoal": vampire,
@@ -1029,6 +1078,7 @@ COSTUMES = {
     "blue": pumpkin_hat,
     "peter": monster,
     "ray": scientist,
+    "giant": count,
 }
 
 
@@ -1636,7 +1686,7 @@ LIVERY = {
     "purple": (0.462, 0.367, 0.688),
     "blue": (0.441, 0.613, 0.723),
 }
-WEARS = {"peter": "classic", "ray": "blue"}
+WEARS = {"peter": "classic", "ray": "blue", "giant": "classic"}
 SHELLS = {
     "top_head_shell.stl",
     "trunk_base.stl",
