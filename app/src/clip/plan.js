@@ -1,5 +1,5 @@
 // The clip's frame plan: a title over the waiting ducks while the camera travels
-// to the chase, the tape at speed, an outro while the rest of the race runs on,
+// to the chase, the tape at life speed, an outro while the rest of the race runs on,
 // and where the outro's stamp lands. Pure, so the recorder's expectations and
 // the page's drawing are pinned by one test.
 
@@ -16,18 +16,19 @@ export const OUTRO_S = 2.5;
 export const STRIDE = Math.round(1 / FPS / CTRL_DT);
 
 /**
- * `authorFrames` is the author's trace length; `tapeMaxS` the event's ceiling;
+ * `frames` is the length of the tape to show: the author's trace, or on a lights event the longest
+ * lane's, every lane played till it is decided; `tapeMaxS` the event's ceiling;
  * `settle` the frames of untimed settle the lanes play first (leadIn), so the
  * tape starts where the simulation did. A run longer than the ceiling — a
  * timeout — is cut there and stamped anyway: the verdict is the record's, not
  * the tape's.
  */
-export function clipPlan(authorFrames, tapeMaxS, settle) {
-  const steps = settle + Math.max(1, Math.min(authorFrames, Math.round(tapeMaxS / CTRL_DT)));
+export function clipPlan(frames, tapeMaxS, settle) {
+  const steps = settle + Math.max(1, Math.min(frames, Math.round(tapeMaxS / CTRL_DT)));
   const intro = FPS * INTRO_S;
   const tape = Math.ceil(steps / STRIDE);
   const outro = Math.round(FPS * OUTRO_S);
-  const frames = intro + tape + outro;
+  const total = intro + tape + outro;
   return {
     fps: FPS,
     stride: STRIDE,
@@ -37,8 +38,8 @@ export function clipPlan(authorFrames, tapeMaxS, settle) {
     travel: FPS * TRAVEL_S,
     tape,
     outro,
-    frames,
-    seconds: frames / FPS,
+    frames: total,
+    seconds: total / FPS,
     tapeEnd: intro + tape,
     poster: intro + Math.floor(tape * 0.6),
   };

@@ -123,6 +123,8 @@ def _measure(root, run, n: int, challenge, key: str | None) -> dict:
         body["cast"] = None  # a race: one duck, nothing to place or hear
     if result.string is not None:
         body["string_b64"] = base64.b64encode(result.string.astype("<f4").tobytes()).decode("ascii")
+    if result.seed_traces is not None:
+        body["caught_frame"] = result.seed_traces[result.trace_seed].caught
     return body | {
         "score": result.score,
         "command_vx": result.command_vx,

@@ -64,6 +64,9 @@ def nature(manifest: Manifest) -> tuple[str, tuple[str, ...]]:
         return ("a pulling contest against the Arena's reference duck: the two are tied by a string "
                 "across a pit in a wrestling ring and each pulls by walking backwards"), ("tug",)
     length = f"{manifest.course.length_m:g} m"
+    if manifest.lights is not None:
+        return (f"a {length} sock heist: little microducks sneak up on a giant microduck's nest to "
+                "steal its socks, and must freeze whenever it turns its head"), ("lights",)
     if manifest.course.slope_deg > 0:
         return f"a {length} climb up an {manifest.course.slope_deg:g} degree slope", ("hill",)
     if manifest.rig == "rollers":
@@ -78,6 +81,20 @@ ACTS = {
     "run": "a run of the day",
 }
 ACT_TAGS = {"first_event": "first-run", "own_best": "pb", "podium": "podium"}
+
+
+def _unfinished(record: RunRecord) -> tuple[str, tuple[str, ...]]:
+    """What stopped the seeds that did not finish, when it was more than the
+    clock: a fall, or being caught moving while the giant looked. Nothing to say
+    when every one of them simply ran out of time."""
+    falls = sum(1 for s in record.per_seed if s.status == "fall")
+    caught = sum(1 for s in record.per_seed if s.status == "caught")
+    said = ([f"fell on {falls}"] if falls else []) + (
+        [f"was caught moving while the giant looked on {caught}"] if caught else [])
+    if not said:
+        return "", ()
+    tags = (("fall",) if falls else ()) + (("caught",) if caught else ())
+    return f"the duck {' and '.join(said)} of them", tags
 
 
 def _rating_result(record: RunRecord, manifest: Manifest) -> Fact:
@@ -105,19 +122,19 @@ def _result(record: RunRecord, manifest: Manifest) -> Fact:
         return _rating_result(record, manifest)
     who = f"@{record.user}"
     total = len(record.per_seed)
-    falls = sum(1 for s in record.per_seed if s.status == "fall")
+    how, tags = _unfinished(record)
     if record.seeds_finished == 0:
         text = f"{who} did not finish: none of the {total} seeds reached the line"
-        text += f", the duck fell on {falls} of them." if falls else "."
-        return Fact("run#/result", text, "result", ("dnf", "fall") if falls else ("dnf",))
+        text += f", {how}." if how else "."
+        return Fact("run#/result", text, "result", ("dnf", *tags))
     text = f"The mean finish time is {record.score:.2f} s"
     if record.seeds_finished == total:
         return Fact("run#/result", text + f", every one of the {total} seeds finished.", "result",
                     ("clean",))
     text += (f", with {record.seeds_finished} of {total} seeds finished; an unfinished seed "
              f"counts as the {manifest.time_limit_s:g} s limit")
-    text += f", and the duck fell on {falls} of them." if falls else "."
-    return Fact("run#/result", text, "result", ("fall",) if falls else ("partial",))
+    text += f", and {how}." if how else "."
+    return Fact("run#/result", text, "result", tags or ("partial",))
 
 
 def _board(record: RunRecord, manifest: Manifest, event_runs) -> Fact:

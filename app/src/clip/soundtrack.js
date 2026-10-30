@@ -7,6 +7,7 @@
 
 import { olaAt, scheduleOla } from "../crowd-behaviour.js";
 import { callSamples, limiter, songSamples, underCeiling } from "../duck-voice.js";
+import { giantQuack } from "../heist-sound.js";
 import { SAMPLE_RATE } from "../live/score.js";
 import { loadCalls } from "../live/voice.js";
 import { stadiumDirection } from "./direction.js";
@@ -47,14 +48,16 @@ export async function renderSoundtrack(score, seconds, { Context = OfflineAudioC
   const limit = limiter(context);
   limit.connect(context.destination);
 
-  // The synth only for a clip whose duck makes a sound: every race and silent performance skips it.
-  const synth = score.cues.some((cue) => cue.call || cue.song) ? await calls() : null;
+  // The synth only for a clip whose duck or giant makes a sound: every other race and silent performance skips it.
+  const synth = score.cues.some((cue) => cue.call || cue.song || cue.quack) ? await calls() : null;
   const cues = await Promise.all(
     score.cues.map(async (cue) => ({
       ...cue,
       buffer: cue.call
         ? synthBuffer(context, callSamples(synth, cue.call, cue.voice))
-        : cue.song
+        : cue.quack
+          ? synthBuffer(context, giantQuack(synth, cue.variant))
+          : cue.song
           ? synthBuffer(context, songSamples(synth, cue.song.sound, cue.song.duration, cue.song.part))
           : await context.decodeAudioData(await load(cue.file)),
     })),
@@ -62,6 +65,7 @@ export async function renderSoundtrack(score, seconds, { Context = OfflineAudioC
   for (const cue of cues) {
     const source = context.createBufferSource();
     source.buffer = cue.buffer;
+    if (cue.rate) source.playbackRate.value = cue.rate;
     const gain = context.createGain();
     gain.gain.value = cue.gain;
     source.connect(gain);

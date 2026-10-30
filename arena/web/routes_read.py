@@ -25,11 +25,12 @@ from ..cup import reached
 from ..cupworker import all_cups
 from ..evaluate import seed_row
 from ..index import leaderboard, standing
+from ..lights import served
 from ..manifest import Manifest, ManifestError, all_events, load_event
 from ..points import boards_by_user, receipts, revealed_final, standings
 from ..store import CLIP_MEDIA, RunRecord, clip_version
 from ..timeline import EDGE_MARGIN_M, MIN_SPACING_M
-from ..trace import decode, decode_settle, decode_string
+from ..trace import decode, decode_caught, decode_settle, decode_string
 
 router = APIRouter(prefix="/api")
 
@@ -88,6 +89,9 @@ def event_summary(manifest: Manifest) -> dict:
             "sweep_hi": manifest.sweep.hi,
             "sweep_step": manifest.sweep.step,
             "sweep_count": len(manifest.sweep.speeds()),
+            # Every seed's timetable, so the page draws the giant in step with
+            # any replay and never draws a random number itself.
+            "lights": served(manifest) if manifest.lights else None,
         }
     elif manifest.course.kind == "stage":
         # The stage's floor and its cap, so the server's placement rules, the workshop's plan and
@@ -441,28 +445,58 @@ def run_policy(run_id: str, request: Request) -> Response:
     )
 
 
+def _seed_key(record: RunRecord, seed: int | None) -> int | None:
+    """The seed to read a trace file with: a lights event keeps a trace per seed, the run's trace
+    seed unless asked; any other keeps its trace seed's alone, which is read without a key."""
+    if load_event(record.event_id).lights is not None:
+        return record.trace_seed if seed is None else seed
+    if seed is None or seed == record.trace_seed:
+        return None
+    raise HTTPException(status_code=404, detail=f"run {record.run_id} keeps no trace of seed {seed}")
+
+
+def _no_trace_of(record: RunRecord, seed: int | None) -> HTTPException:
+    return HTTPException(status_code=404, detail=f"run {record.run_id} keeps no trace of seed {seed}")
+
+
 @router.get("/runs/{run_id}/trace")
-def run_trace(run_id: str, request: Request) -> Response:
+def run_trace(run_id: str, request: Request, seed: int | None = None) -> Response:
     """Raw little-endian float32, TRACE_WIDTH values per frame, every duck's frames
     one duck after another (`frames_response`).
 
     The stored form is compressed float16 npz, which a browser cannot read. This
     decodes it server-side so the frontend is one `new Float32Array(buffer)` away
     from a replay — no numpy-in-JavaScript, no base64 bloat.
+
+    `seed` picks which seed's trace a Sock Heist run serves (its trace seed unless
+    asked; X-Caught-Frame says where that seed's duck was caught); any other run
+    serves its trace seed and no other.
     """
     store = request.app.state.store
-    _find_run(store, run_id)  # 404 before touching the trace file
-    return frames_response(decode(store.trace(run_id)))
+    record = _find_run(store, run_id)  # 404 before touching the trace file
+    key = _seed_key(record, seed)
+    blob = store.trace(run_id)
+    try:
+        response = frames_response(decode(blob, key))
+    except KeyError:
+        raise _no_trace_of(record, key) from None
+    if key is not None and (caught := decode_caught(blob, key)) is not None:
+        response.headers["X-Caught-Frame"] = str(caught)
+    return response
 
 
 @router.get("/runs/{run_id}/settle")
-def run_settle(run_id: str, request: Request) -> Response:
+def run_settle(run_id: str, request: Request, seed: int | None = None) -> Response:
     """The untimed settle that led into the trace, from the reset pose, in the
     trace's own format: where a clip starts. Empty for a run stored before
-    settles were recorded."""
+    settles were recorded. `seed` is the trace route's."""
     store = request.app.state.store
-    _find_run(store, run_id)
-    return frames_response(decode_settle(store.trace(run_id)))
+    record = _find_run(store, run_id)
+    key = _seed_key(record, seed)
+    try:
+        return frames_response(decode_settle(store.trace(run_id), key))
+    except KeyError:
+        raise _no_trace_of(record, key) from None
 
 
 @router.get("/runs/{run_id}/string")

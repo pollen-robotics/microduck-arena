@@ -10,6 +10,7 @@ const SPRINT = {
 };
 const HILL = { ...SPRINT, id: "hill-climb-1m5", title: "1.5 m Hill Climb", length_m: 1.5, slope_deg: 8 };
 const ROLLER = { ...SPRINT, id: "roller-sprint-2m", title: "2 m Roller Sprint", rig: "rollers" };
+const HEIST = { ...SPRINT, id: "sock-heist-6m", title: "6 m Sock Heist", length_m: 6 };
 const TALENT = { id: "got-a-talent", title: "MicroDuck Got a Talent", category: "showcase", course: "stage",
   rig: "legs", time_limit_s: 20, metric: "votes", vote: { ballot_min: 2 } };
 const HELD = [{ user: "cdeplanne", policy_name: "Walk rough", score: 9.456, seeds_finished: 5 }];
@@ -67,6 +68,15 @@ describe("a round card", () => {
     expect(card.querySelector(".round-card__cta").textContent).toBe("Let's roll!");
     // The button is the card's own on a timed event: the link's cover takes the click.
     expect(card.querySelector("span.round-card__cta")).not.toBeNull();
+  });
+
+  it("names the heist in a word that holds one line, and its button sneaks in", () => {
+    const card = roundCard(HEIST, [], { number: 6 });
+    expect(card.querySelector(".round-card__title").textContent).toBe("Sock Heist");
+    expect(card.querySelector(".round-card__cta").textContent).toBe("Sneak in!");
+    expect(card.style.getPropertyValue("--c")).toBe("var(--magenta)");
+    expect(cells(card)).toEqual(["6 m", "Flat", "Legs"]);
+    expect(card.querySelector(".round-card__art img").getAttribute("src")).toBe("/cards/sock-heist-6m.webp");
   });
 
   it("still deals an event it has no look for, in paper with a plain button", () => {

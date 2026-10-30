@@ -44,6 +44,9 @@ def test_nature_reads_the_manifest():
     assert nature(load_event("roller-sprint-2m")) == ("a 2 m race on roller skates", ("rollers",))
     assert nature(load_event("got-a-talent")) == (
         "a performance on a stage decided by the public's votes", ("vote",))
+    assert nature(load_event("sock-heist-6m")) == (
+        ("a 6 m sock heist: little microducks sneak up on a giant microduck's nest to steal its socks, "
+         "and must freeze whenever it turns its head"), ("lights",))
 
 
 def test_a_clean_run_states_event_participant_time_rank_gap_and_points():
@@ -96,6 +99,30 @@ def test_a_dnf_by_timeout_is_not_a_fall_and_a_voted_event_has_no_board():
     voted = run("eve", 20.0, "2026-09-11T10:00:00Z", event="got-a-talent")
     refs = [f.ref for f in result_facts(voted, talent, [voted], [])]
     assert "run#/board" not in refs
+
+
+def test_caught_by_the_giant_is_said_and_is_not_a_fall():
+    lights = load_event("sock-heist-6m")
+    per_seed = (SeedResult(1, "caught", None), SeedResult(2, "caught", None), SeedResult(3, "timeout", None),
+                SeedResult(4, "caught", None), SeedResult(5, "timeout", None))
+    caught = make_record(user="fay", score=150.0, seeds_finished=0, per_seed=per_seed,
+                         event_id="sock-heist-6m", submitted_at="2026-09-11T10:00:00Z")
+    facts = {f.ref: f for f in result_facts(caught, lights, [caught], [])}
+    assert facts["run#/result"].text == (
+        "@fay did not finish: none of the 5 seeds reached the line, the duck was caught moving "
+        "while the giant looked on 3 of them."
+    )
+    assert facts["run#/result"].tags == ("dnf", "caught")
+    per_seed = (SeedResult(1, "finish", 63.0), SeedResult(2, "fall", None), SeedResult(3, "caught", None),
+                SeedResult(4, "finish", 70.0), SeedResult(5, "finish", 66.5))
+    mixed = make_record(user="fay", score=99.9, seeds_finished=3, per_seed=per_seed,
+                        event_id="sock-heist-6m", submitted_at="2026-09-11T10:00:00Z")
+    facts = {f.ref: f for f in result_facts(mixed, lights, [mixed], [])}
+    assert facts["run#/result"].text == (
+        "The mean finish time is 99.90 s, with 3 of 5 seeds finished; an unfinished seed counts as "
+        f"the {lights.time_limit_s:g} s limit, and the duck fell on 1 and was caught moving while the giant looked on 1 of them."
+    )
+    assert facts["run#/result"].tags == ("fall", "caught")
 
 
 def test_the_authors_words_are_a_fact_when_they_read_as_prose():

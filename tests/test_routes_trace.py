@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from arena.constants import TRACE_WIDTH
 from arena.evaluate import SeedResult
-from arena.trace import encode
+from arena.trace import SeedTrace, encode, encode_seeds
 from arena.web.app import create_app
 from arena.web.config import ArenaConfig
 from tests.test_store import make_record
@@ -177,3 +177,54 @@ def test_an_unknown_run_is_a_404(client):
         response = api.get(path)
         assert response.status_code == 404, path
         assert "no such run" in response.json()["detail"], path
+
+
+def heist_run(app, trace_seed=3, caught=None):
+    """A heist run kept on seeds 1 to 5: seed s's trace s + 4 frames long, its settle 2, both offset by 100 s."""
+    caught = {4: 6} if caught is None else caught
+    record = make_record(event_id="sock-heist-6m", trace_seed=trace_seed)
+    seeds = {s: SeedTrace(a_trace(frames=s + 4) + 100 * s, a_trace(frames=2) + 100 * s, caught.get(s)) for s in range(1, 6)}
+    app.state.store.append(record, encode_seeds(seeds))
+    return record, seeds
+
+
+def frames(response):
+    return np.frombuffer(response.content, dtype="<f4").reshape(-1, TRACE_WIDTH)
+
+
+def test_a_heist_run_serves_its_trace_seed_unless_asked_another(client):
+    api, app = client
+    record, seeds = heist_run(app)
+    plain = api.get(f"/api/runs/{record.run_id}/trace")
+    assert plain.headers["x-frame-count"] == "7" and "x-caught-frame" not in plain.headers
+    np.testing.assert_array_equal(frames(plain), seeds[3].trace)
+    four = api.get(f"/api/runs/{record.run_id}/trace?seed=4")
+    assert (four.headers["x-frame-count"], four.headers["x-caught-frame"]) == ("8", "6")
+    np.testing.assert_array_equal(frames(four), seeds[4].trace)
+    np.testing.assert_array_equal(frames(api.get(f"/api/runs/{record.run_id}/settle?seed=2")), seeds[2].settle)
+    np.testing.assert_array_equal(frames(api.get(f"/api/runs/{record.run_id}/settle")), seeds[3].settle)
+
+
+def test_a_seed_a_heist_run_kept_no_trace_of_is_a_404_not_a_500(client):
+    api, app = client
+    record, _ = heist_run(app)
+    for path in ("trace?seed=9", "settle?seed=9"):
+        response = api.get(f"/api/runs/{record.run_id}/{path}")
+        assert response.status_code == 404 and "seed 9" in response.json()["detail"], path
+    # Stored as one trace, before every seed was kept: there is no seed to serve, and that is a 404 too.
+    old = make_record(event_id="sock-heist-6m", trace_seed=1)
+    app.state.store.append(old, encode(a_trace(frames=5), a_trace(frames=2)))
+    for path in ("trace", "settle"):
+        assert api.get(f"/api/runs/{old.run_id}/{path}").status_code == 404, path
+
+
+def test_another_event_serves_its_trace_seed_and_no_other(client):
+    api, app = client
+    record = make_record(trace_seed=2)
+    app.state.store.append(record, encode(a_trace(frames=9), a_trace(frames=4)))
+    plain, asked = (api.get(f"/api/runs/{record.run_id}/trace{q}") for q in ("", "?seed=2"))
+    assert asked.status_code == 200 and asked.content == plain.content and "x-caught-frame" not in asked.headers
+    assert api.get(f"/api/runs/{record.run_id}/settle?seed=2").headers["x-frame-count"] == "4"
+    for path in ("trace?seed=1", "settle?seed=1"):
+        response = api.get(f"/api/runs/{record.run_id}/{path}")
+        assert response.status_code == 404 and "seed 1" in response.json()["detail"], path

@@ -32,7 +32,7 @@ const TAIL_S = 0.2;
 /** A cut sound fades out over this, so it stops without a click. */
 const FADE_S = 0.005;
 /** The variants of each call in the robot's bank (sounds::variant_count). */
-const VARIANTS = { chirp: 12, wheee: 6 };
+export const VARIANTS = { chirp: 12, wheee: 6 };
 /** The mix's ceiling, a little under full scale: no sample of the stage or the clip passes it. */
 export const CEILING = 0.99;
 /** Where the stage's ceiling starts to bend a sample: under it, the mix passes untouched. */

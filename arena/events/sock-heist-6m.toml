@@ -1,0 +1,90 @@
+id           = "sock-heist-6m"
+order        = 50
+title        = "6 m Sock Heist"
+category     = "race"
+kind         = "perpetual"
+rig          = "legs"
+# Measured on Linux-x86_64, the Space's platform (HF Job 6ae225f63fb22a235dd43e1c,
+# 2026-10-28): the reference walker (BEST_alpha_walking.onnx) finishes every seed
+# at 1.00 m/s in 22.4-25.2 s, a score of 24.159 s, and its slowest seed plus half,
+# rounded up to 5 s, is this limit.
+time_limit_s = 40.0
+metric       = "mean_finish_time"
+seeds        = [1, 2, 3, 4, 5]
+
+[course]
+kind          = "lane"
+length_m      = 6.0
+width_m       = 0.8
+wall_height_m = 0.15
+slope_deg     = 0.0
+
+[command]
+vel  = [0.25, 0.0, 0.0]
+head = [0.0, 0.0, 0.0, 0.0]
+body = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+[start]
+keyframe = "STAND"
+settle_s = 0.5
+
+[start.perturbation]
+joint_rad = 0.01
+yaw_deg   = 2.0
+
+[termination]
+fall_gravity_z = -0.5
+fall_hold_s    = 0.3
+
+[sweep]
+lo        = 0.20
+hi        = 1.20
+step      = 0.05
+finalists = 3
+
+# The giant microduck in its nest of socks, past the line (arena.lights). Each
+# seed draws its own timetable from these three ranges, the same for every
+# entrant: seconds of green before its first look, then red, green, red... until
+# the time limit. The first green is short on purpose, so a duck that bolts off
+# the line has to stop as hard as it started. On red the duck is asked to stand;
+# the giant takes turn_s to turn its head, and nothing counts then. After that, a
+# duck that strays more than tolerance_m from where it stood is caught. Measured
+# on the same job: with these ranges the reference walker meets 6 reds on its
+# trace seed 3 (5-6 over the five seeds).
+[lights]
+first_green_s = [0.6, 1.0]
+green_s       = [1.6, 3.0]
+red_s         = [1.4, 2.4]
+turn_s        = 0.4
+tolerance_m   = 0.03
+
+# Even six metres is not straight unaided (arena.manifest.Steering): the lane
+# turns the duck toward its centre line half a metre ahead, at no more than
+# 1 rad/s, the range of yaw rates the reference walker was trained on.
+[steering]
+lookahead_m  = 0.5
+gain         = 2.0
+max_yaw_rate = 1.0
+
+# The whole heist on tape, at life speed, and the giant's roar in its soundtrack.
+[clip]
+tape_max_s = 40.0
+sounds     = ["crowd", "horn", "giant", "verdict"]
+
+# The playground from behind the field, down the lanes to the giant, who stays
+# whole in the picture from the start to the dive: over several lanes it follows
+# the hindmost duck less than 0.6 m behind the leader (app/src/viewer.js
+# PACK_REACH), backed off to show every lane a picture can hold (packChase),
+# and it stops 0.6 m short of the line, near the socks the first ducks across
+# dive into. The event, run and workshop pages film a heist with it too
+# (app/src/cast.js pageCamera): a page stands `back` behind its field, farther
+# than a landscape clip, which stands as far as its four lanes need (2.3 m), so
+# that a duck left behind is still in the page's picture when the first dives.
+[clip.camera]
+kind          = "chase"
+back          = 3.0
+height        = 1.2
+side          = 0.1
+target_height = 0.5
+track         = true
+hold          = 0.6

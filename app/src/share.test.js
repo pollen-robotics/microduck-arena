@@ -37,6 +37,8 @@ describe("postText", () => {
     expect(postText(fell, { origin, network: "x" })).toContain("finished 0/5 seeds on its feet — it ate the floor.");
     const late = { ...fell, per_seed: [{ seed: 1, status: "timeout", time_s: null }] };
     expect(postText(late, { origin, network: "x" })).toContain("it ran out of time.");
+    const caught = { ...fell, per_seed: [{ seed: 1, status: "caught", time_s: null }, { seed: 2, status: "timeout", time_s: null }] };
+    expect(postText(caught, { origin, network: "x" })).toContain("it got caught moving while the giant looked.");
   });
 
   it("fits X with a long policy name, links counted as 23", () => {

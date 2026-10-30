@@ -300,6 +300,9 @@ export function buildGym(length, minZ, maxZ, branding, trackSpan) {
   }
   return {
     group, floorMaterial, sponsorMaps,
+    // Where a camera may stand, in world metres: clear of the wall bars on the end wall behind the
+    // start, and under the lamps.
+    room: { back: left + 0.3, ceiling: 3.43 * group.scale.y - 0.2 },
     dispose() {
       const materials = new Set(floors);
       group.traverse((node) => {

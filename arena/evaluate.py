@@ -45,6 +45,7 @@ from .course import compile_course, compile_tug
 from .manifest import Manifest
 from .runner import Performer, run_once, run_stage
 from .timeline import Start, constant_timeline
+from .trace import SeedTrace, encode, encode_seeds
 from .tug import bout_score_cm, bout_status, entry_side, reference_duck, run_bout
 
 
@@ -96,6 +97,15 @@ class Evaluation:
     # STRING_POINTS, 3) (arena/tug.py); None but on a tug.
     string: np.ndarray | None = None
     string_settle: np.ndarray | None = None
+    # A lights event: every seed of the scored command, keyed by seed; None on any other.
+    seed_traces: dict[int, SeedTrace] | None = None
+
+
+def trace_file(result: Evaluation) -> bytes:
+    """What a run stores: every seed's trace for a lights event, else the one traced run."""
+    if result.seed_traces is not None:
+        return encode_seeds(result.seed_traces)
+    return encode(result.trace, result.settle, result.string, result.string_settle)
 
 
 def mean_finish_time(per_seed: tuple[SeedResult, ...], time_limit_s: float) -> float:
@@ -169,6 +179,12 @@ def finalists(scan: tuple[ScanPoint, ...], count: int) -> list[float]:
     return shortlist
 
 
+def _seed_traces(manifest: Manifest, outcomes) -> dict[int, SeedTrace] | None:
+    if manifest.lights is None:
+        return None
+    return {o.seed: SeedTrace(o.trace, o.settle, o.caught_frame) for o in outcomes}
+
+
 def evaluate_at(manifest: Manifest, policy, command_vx: float) -> Evaluation:
     """Score a policy at ONE commanded speed, skipping the scan.
 
@@ -212,6 +228,7 @@ def evaluate_at(manifest: Manifest, policy, command_vx: float) -> Evaluation:
         settle=next(o.settle for o in outcomes if o.seed == trace_seed),
         trace_seed=trace_seed,
         runner_version=RUNNER_VERSION,
+        seed_traces=_seed_traces(manifest, outcomes),
     )
 
 
@@ -281,6 +298,7 @@ def evaluate(manifest: Manifest, policy, cast: tuple[Performer, ...] | None = No
         settle=outcomes[(command_vx, trace_seed)].settle,
         trace_seed=trace_seed,
         runner_version=RUNNER_VERSION,
+        seed_traces=_seed_traces(manifest, [outcomes[(command_vx, s)] for s in manifest.seeds]),
     )
 
 

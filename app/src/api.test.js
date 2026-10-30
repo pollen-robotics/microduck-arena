@@ -234,3 +234,21 @@ describe("a match", () => {
       "/api/matches/tug-of-war-0001-000/bouts/2/settle"]);
   });
 });
+
+describe("a lights run's seeds", () => {
+  it("asks for one seed's trace and settle when given one, and for the stored ones as today when not", async () => {
+    respondWith({ bytes: new Float32Array(2).buffer });
+    await getTrace("R1", 3);
+    expect(globalThis.fetch).toHaveBeenLastCalledWith("/api/runs/R1/trace?seed=3");
+    await getSettle("R1", 3);
+    expect(globalThis.fetch).toHaveBeenLastCalledWith("/api/runs/R1/settle?seed=3");
+    await getTrace("R1");
+    expect(globalThis.fetch).toHaveBeenLastCalledWith("/api/runs/R1/trace");
+  });
+  it("carries the frame a seed's duck was caught on, and null when it was not", async () => {
+    respondWith({ bytes: new Float32Array(2).buffer, headers: { "X-Caught-Frame": "412" } });
+    expect((await getTrace("R1", 3)).caught).toBe(412);
+    respondWith({ bytes: new Float32Array(2).buffer });
+    expect((await getTrace("R1", 3)).caught).toBeNull();
+  });
+});

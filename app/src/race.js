@@ -10,7 +10,7 @@ import {
   withdrawRun,
 } from "./api.js";
 import { boardsheetMarkup, podium, wireBoardsheet } from "./boardsheet.js";
-import { replayLane } from "./cast.js";
+import { pageCamera, replayLane, replaySeed } from "./cast.js";
 import { cupDaysLeft } from "./cup.js";
 import { deckMarkup, followKeyFor, offerOrbit, wireDeck } from "./deck.js";
 import { colourLanes } from "./lanes.js";
@@ -233,6 +233,8 @@ export async function renderRace(root, { event, state }) {
     // The event declares its rig, and the roller rig is a different kinematic
     // tree with its own blades, rims and tires — not a repaint of the walker.
     rig: event.rig,
+    lights: Boolean(event.lights),
+    camera: pageCamera(event),
     onChaseChange: followKeyFor(root),
   });
   state.viewer = viewer;
@@ -251,9 +253,13 @@ export async function renderRace(root, { event, state }) {
   const casts = new Map(); // run id -> every duck it put on the stage (cast.js)
   const seeds = new Map(); // run id -> the seed its bout replays, which says the entry's end of the string
 
-  async function traceFor(runId) {
-    if (!traces.has(runId)) traces.set(runId, await getTrace(runId));
-    return traces.get(runId);
+  // A lights event: the seed every lane plays, the board's leader's, read again with the board.
+  let replayed;
+
+  async function traceFor(runId, seed) {
+    const key = `${runId}:${seed}`;
+    if (!traces.has(key)) traces.set(key, await getTrace(runId, seed));
+    return traces.get(key);
   }
 
   // A rated run's string beside its ducks: the page plays no settle, so its timed frames only.
@@ -265,7 +271,7 @@ export async function renderRace(root, { event, state }) {
 
   async function race(runIds, tiers = new Map()) {
     const [published, strung] = await Promise.all([
-      Promise.all(runIds.map(traceFor)),
+      Promise.all(runIds.map((runId) => traceFor(runId, replayed))),
       Promise.all(isTug(event) ? runIds.map(stringFor) : []),
     ]);
     const lanes = runIds.map((runId, i) => replayLane(event, casts.get(runId), published[i], {
@@ -275,7 +281,7 @@ export async function renderRace(root, { event, state }) {
       livery: liveries.get(runId) ?? "classic",
       // The plate over the duck: the viewer builds one for a lane with a name.
       name: names.get(runId),
-      traceSeed: seeds.get(runId),
+      traceSeed: replayed ?? seeds.get(runId),
     }, strung[i]));
     // A performance plays alone on the stage, a rated run alone against the reference duck.
     const solo = isStage(event) || isTug(event);
@@ -288,6 +294,7 @@ export async function renderRace(root, { event, state }) {
     me: me?.user ?? null,
     rows: async () => {
       const { rows } = await getLeaderboard(event.id);
+      replayed = replaySeed(event, rows[0]);
       for (const row of rows) {
         liveries.set(row.run_id, row.livery ?? "classic");
         names.set(row.run_id, row.user);

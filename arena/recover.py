@@ -197,9 +197,8 @@ def recover(store, events, all_tagged=False, reader=None, on_event=None) -> list
     """
     from datetime import UTC, datetime
 
-    from . import trace as trace_codec
     from .cast import cast_of, load_borrowed
-    from .evaluate import evaluate
+    from .evaluate import evaluate, trace_file
     from .hub_fetch import fetch_policy
     from .policy import load_policy
     from .store import RunRecord, lone_cast, new_id
@@ -247,7 +246,7 @@ def recover(store, events, all_tagged=False, reader=None, on_event=None) -> list
             )
             store.append(
                 record,
-                trace_codec.encode(result.trace, result.settle, result.string, result.string_settle),
+                trace_file(result),
             )
             restored.append(record)
             if on_event:

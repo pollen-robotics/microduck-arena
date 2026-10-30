@@ -2,6 +2,7 @@
 
 import json
 import random
+import re
 
 import pytest
 
@@ -63,3 +64,10 @@ def test_selection_draws_among_the_memories_that_match_and_skips_recent():
     assert select_memories(lore, [Fact("x", "...", "result", ("sprint",))], set(),
                            random.Random(0)) == []
     assert len(select_memories(lore, facts, set(), random.Random(0), limit=1)) == 1
+
+
+def test_the_heists_memories_tell_of_the_giant():
+    heist = [m for m in load().memories if {"lights", "caught"} & set(m.tags)]
+    assert {"lights", "caught"} <= {tag for m in heist for tag in m.tags}
+    for memory in heist:
+        assert not re.search(r"caller|red light|reachy", memory.memory, re.IGNORECASE), memory.id

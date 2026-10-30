@@ -4,13 +4,15 @@
 
 import { choirOf, voiceEvents } from "../duck-voice.js";
 import { isStage, isTug } from "../format.js";
-import { CTRL_DT, frameAt } from "../replay.js";
+import { FALL_FILE, heistCues } from "../heist-sound.js";
+import { timetableOf } from "../lights.js";
+import { CTRL_DT, frameAt, frameCount } from "../replay.js";
 import { BOUT_WORDS } from "../tug.js";
 
 /** Cue gains, measured on a real render: the horn 5 dB over the crowd's surge,
  * the victory level with the crowd's cheer, and the fall — over a crowd gone
  * quiet — just over the stamp, and the duck's voice at the synth's own level, under the limiter. */
-const GAINS = { horn: 2, stamp: 0.6, victory: 7, fall: 0.45, voice: 1 };
+const GAINS = { horn: 2, stamp: 0.6, victory: 7, fall: 0.45, voice: 1, quack: 1 };
 /** How often the crowd learns where the duck is, in seconds of tape. */
 const PROGRESS_EVERY_S = 0.5;
 
@@ -20,11 +22,12 @@ function fnv(text) {
   return hash;
 }
 
-/** The author's progress down the course, sampled through the tape. */
+/** The author's progress down the course, sampled every PROGRESS_EVERY_S of the tape; the tape
+ * can run on past the author's lane, which holds its last frame. */
 function progress(trace, plan, lengthM, start) {
   const samples = [];
   for (let t = 0; t <= plan.steps * CTRL_DT; t += PROGRESS_EVERY_S) {
-    const step = Math.min(plan.steps - 1, Math.round(t / CTRL_DT));
+    const step = Math.min(plan.steps - 1, frameCount(trace) - 1, Math.round(t / CTRL_DT));
     const value = Math.max(0, Math.min(1, frameAt(trace, step)[0] / lengthM));
     samples.push({ second: start + t, value });
   }
@@ -38,8 +41,14 @@ const SOURCES = {
     { at: end, file: "stamp.wav", gain: GAINS.stamp },
     verdict === "pass"
       ? { at: end + 0.16, file: "microduck-victory-echo.mp3", gain: GAINS.victory }
-      : { at: end + 0.16, file: "microduck-fall.wav", gain: GAINS.fall },
+      : { at: end + 0.16, file: FALL_FILE, gain: GAINS.fall },
   ],
+  // The giant's quack at each red and a fall where a duck goes out, on the race's clock.
+  giant: ({ run, lanes, performed }) =>
+    heistCues(timetableOf(run.event, run.trace_seed), lanes, run.event.length_m, run.event.time_limit_s, run.trace_seed).map(({ at, kind, variant, rate }) =>
+      kind === "quack"
+        ? { at: performed + at, quack: true, variant, rate, gain: GAINS.quack }
+        : { at: performed + at, file: FALL_FILE, gain: GAINS.fall }),
 };
 
 /**
@@ -58,18 +67,19 @@ export function clipVerdict(run) {
 
 /**
  * `trace` is the author's lane, settle included; `ducks` the stage's troupe in duck order (cast.js
- * stageDucks), each with how it sounds, and none for a race or a tug.
+ * stageDucks), each with how it sounds, and none for a race or a tug. `lanes` is every lane of a
+ * Sock Heist race on the replay's seed: its trace and the frame its duck was caught on.
  */
-export function clipScore({ run, plan, trace, ducks }) {
+export function clipScore({ run, plan, trace, ducks, lanes }) {
   const sounds = run.event.clip.sounds;
   const verdict = clipVerdict(run).pass ? "pass" : "fail";
   // A stage and a tug have no course to go down: their crowd answers the verdict alone.
   const still = isStage(run.event) || isTug(run.event);
   const start = plan.intro / plan.fps;
   const end = plan.tapeEnd / plan.fps;
-  const context = { start, end, verdict };
   // The performance starts on the tape after the settle; its length is the author's trace, cut short or not.
   const performed = start + plan.settle * CTRL_DT;
+  const context = { start, end, verdict, run, lanes, performed };
   const length = (plan.steps - plan.settle) * CTRL_DT;
   // Every duck's calls and song, as on the stage: two or more singers sing their parts as a chorus.
   const choral = choirOf(ducks);

@@ -4,7 +4,7 @@
 // the focus and an open Output stay, and no button is rebuilt under the pointer.
 
 import { MIN } from "../brightness.js";
-import { stageDucks } from "../cast.js";
+import { pageCamera, stageDucks } from "../cast.js";
 import { deckMarkup, followKeyFor, offerOrbit, wireDeck } from "../deck.js";
 import { isStage, isTug } from "../format.js";
 import { eventGuideHref } from "../router.js";
@@ -261,7 +261,9 @@ export async function mountJob(root, { status, account, route }) {
 
   // The stadium, made once, a replay waiting for it; until one plays, it is empty.
   let viewer = null;
-  const stadium = createViewer(grid.querySelector("#stage"), { rig: event.rig, onChaseChange: followKeyFor(grid) }).then((made) => {
+  const stadium = createViewer(grid.querySelector("#stage"), {
+    rig: event.rig, lights: Boolean(event.lights), camera: pageCamera(event), onChaseChange: followKeyFor(grid),
+  }).then((made) => {
     if (left) {
       made.dispose();
       return null;
@@ -283,7 +285,8 @@ export async function mountJob(root, { status, account, route }) {
     viewer.setLanes([stage
       ? { name, livery: "classic", ducks: stageDucks(body.cast, body.traces, null, { livery: "classic", eventRig: event.rig, lead: 0 }) }
       : tug ? ratingLane(body.traces, null, { trace: body.string }, { traceSeed: body.trace_seed, livery: "classic", name })
-      : { trace: body.traces[0], tier: "trial", livery: "classic", name }], event);
+      : { trace: body.traces[0], tier: "trial", livery: "classic", name,
+          ...(event.lights && { traceSeed: body.trace_seed, caught: body.caught_frame }) }], event);
   }
 
   async function pick(n) {

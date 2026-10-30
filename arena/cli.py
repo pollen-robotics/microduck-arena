@@ -12,10 +12,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from . import stage
-from . import trace as trace_codec
 from .cast import cast_of, load_borrowed
 from .constants import CTRL_DT
-from .evaluate import evaluate
+from .evaluate import evaluate, trace_file
 from .hub_fetch import FetchError, fetch_references
 from .index import ENTRANTS, leaderboard
 from .manifest import ManifestError, all_events, higher_wins, load_event
@@ -114,7 +113,7 @@ def _cmd_score(args) -> int:
         )
         LocalStore(Path(args.store)).append(
             record,
-            trace_codec.encode(result.trace, result.settle, result.string, result.string_settle),
+            trace_file(result),
             Path(args.onnx).read_bytes(),
         )
         print(f"recorded {record.run_id}")

@@ -27,6 +27,7 @@ const CARDS = {
   "roller-sprint-2m": { accent: "var(--orange)", cta: "Let's roll!" },
   "hill-climb-1m5": { accent: "var(--cyan)", cta: "Climb!" },
   "tug-of-war": { accent: "var(--lime)", cta: "Pull!" },
+  "sock-heist-6m": { accent: "var(--magenta)", cta: "Sneak in!", title: "Sock Heist" },
 };
 const PLAIN = { accent: "var(--paper)", cta: "Go!" };
 

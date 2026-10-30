@@ -8,9 +8,12 @@ import threading
 import time
 
 from arena.constants import TRACE_WIDTH
+from arena.evaluate import evaluate_at
+from arena.workshop import evaluations
 from arena.workshop.evaluations import evaluate_next, next_checkpoint
-from tests.workshop.conftest import make_run, reopen, store_evaluation
-from tests.workshop.test_tickets import add_tug
+from tests.test_lights import _short
+from tests.workshop.conftest import SPRINT, git, make_run, reopen, store_evaluation
+from tests.workshop.test_tickets import TASK, add_tug
 
 SPRINT_URL = "/api/workshop/challenges/sprint-2m"
 
@@ -39,6 +42,7 @@ def test_a_checkpoint_is_exported_by_a_dry_run_publish_and_raced(workshop, fakes
     assert body["checkpoint"] == 1 and body["score"] < 50
     assert len(base64.b64decode(body["trace_b64"])) % (4 * TRACE_WIDTH) == 0
     assert "string_b64" not in body
+    assert "caught_frame" not in body
     assert body["ducks"] == 1  # a race is one duck
     (publish,) = fakes.calls("publish")
     assert publish[3:7] == ["--run", str(run), "--checkpoint", "1"]
@@ -165,3 +169,31 @@ def test_a_tug_checkpoint_is_rated_against_the_reference(checkout, fakes, hub):
     assert body["ducks"] == 2  # the entry's duck and the reference
     frames = len(base64.b64decode(body["trace_b64"])) // (2 * TRACE_WIDTH * 4)
     assert len(base64.b64decode(body["string_b64"])) == frames * 51 * 4 and body["format"] == 3
+
+
+def add_heist(checkout):
+    folder = checkout / "src" / "microduck_challenges" / "sock_heist_6m"
+    folder.mkdir()
+    (folder / "challenge.toml").write_text(
+        SPRINT.replace('"sprint-2m"', '"sock-heist-6m"').replace(TASK, "Mjlab-SockHeist6m-MicroDuck"))
+    git(checkout, "add", "-A")
+    git(checkout, "commit", "-q", "-m", "Sock Heist")
+
+
+def test_a_heist_checkpoint_says_where_its_traced_duck_was_caught(checkout, fakes, hub, monkeypatch):
+    add_heist(checkout)
+    client = reopen(checkout, hub)
+    measured = []
+
+    def caught_at_the_first_look(event, policy):
+        measured.append(evaluate_at(_short(event, 3.0, tolerance_m=1e-6), policy, 0.3))
+        return measured[-1]
+
+    monkeypatch.setattr(evaluations, "evaluate", caught_at_the_first_look)
+    run = make_run(checkout, "first", checkpoints=(1,), task="Mjlab-SockHeist6m-MicroDuck")
+    assert evaluate_next(state(client)) is True
+    body = client.get(f"/api/workshop/challenges/sock-heist-6m/jobs/{run.name}/checkpoints/1").json()
+    (result,) = measured
+    assert body["trace_seed"] == result.trace_seed
+    assert body["caught_frame"] is not None
+    assert body["caught_frame"] == result.seed_traces[result.trace_seed].caught

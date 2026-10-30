@@ -199,7 +199,7 @@ def test_the_served_walls_are_the_walls_the_physics_compiles():
     from arena.course import compile_course, wall_boxes
     from arena.manifest import load_event
 
-    for event_id in ("sprint-2m", "roller-sprint-2m", "hill-climb-1m5"):
+    for event_id in ("sprint-2m", "roller-sprint-2m", "hill-climb-1m5", "sock-heist-6m"):
         manifest = load_event(event_id)
         model = compile_course(manifest)
         for name, pos, half in wall_boxes(manifest.course):

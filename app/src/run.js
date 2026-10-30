@@ -7,7 +7,7 @@
 import { getClip, getMe, getRun, getString, getTrace, markSeen } from "./api.js";
 import { flipTiles } from "./animation.js";
 import { boardsheetMarkup, wireBoardsheet } from "./boardsheet.js";
-import { featured, replayLane } from "./cast.js";
+import { featured, pageCamera, replayLane, replaySeed } from "./cast.js";
 import { deckMarkup, followKeyFor, offerOrbit, wireDeck } from "./deck.js";
 import { formatSpeed, isStage, isTug } from "./format.js";
 import { colourLanes, lanesFor } from "./lanes.js";
@@ -300,8 +300,9 @@ export async function renderRun(root, runId, state) {
   // which on a first visit is a model download away.
   const byId = new Map(run.board.map((row) => [row.run_id, row]));
   const traces = new Map();
+  const replayed = replaySeed(run.event, run); // a lights event: every lane plays this run's own trace seed
   const traceFor = async (id) => {
-    if (!traces.has(id)) traces.set(id, await getTrace(id));
+    if (!traces.has(id)) traces.set(id, await getTrace(id, replayed));
     return traces.get(id);
   };
   // A rated run's string beside its ducks: the page plays no settle, so its timed frames only.
@@ -329,7 +330,7 @@ export async function renderRun(root, runId, state) {
       // The plate over the duck.
       name: byId.get(id).user,
       // The seed its bout replays, which says which end of the string the entry holds.
-      traceSeed: byId.get(id).trace_seed,
+      traceSeed: replayed ?? byId.get(id).trace_seed,
     }, strung[i]));
     viewer.setLanes(colourLanes($("board"), lanes), run.event);
   }
@@ -374,6 +375,8 @@ export async function renderRun(root, runId, state) {
   // The stage.
   const created = await createViewer($("stage"), {
     rig: run.event.rig,
+    lights: Boolean(run.event.lights),
+    camera: pageCamera(run.event),
     onChaseChange: followKeyFor(page),
     hushed: () => !strip.player.paused,
   });

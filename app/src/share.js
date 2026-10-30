@@ -45,7 +45,10 @@ export function postText(run, { origin, network }) {
     result = `On ${run.event.title} its rating is ${run.score.toFixed(1)} cm against the reference duck${place}${points}.`;
   } else if (run.seeds_finished === 0) {
     const fell = run.per_seed.some((s) => s.status === "fall");
-    result = `On ${run.event.title} it finished 0/${total} seeds on its feet — ${fell ? "it ate the floor" : "it ran out of time"}.`;
+    // Sock Heist ends a duck caught moving while the giant looks: standing, so no fall, and early, so no clock.
+    const caught = run.per_seed.some((s) => s.status === "caught");
+    const why = fell ? "it ate the floor" : caught ? "it got caught moving while the giant looked" : "it ran out of time";
+    result = `On ${run.event.title} it finished 0/${total} seeds on its feet — ${why}.`;
   } else {
     result = `On ${run.event.title} it finished ${run.seeds_finished}/${total} seeds in ${run.score.toFixed(3)} s${place}${points}.`;
   }

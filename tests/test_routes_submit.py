@@ -1,6 +1,8 @@
 import hashlib
+import io
 from pathlib import Path
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
@@ -676,3 +678,12 @@ def test_a_tug_entry_is_rated_in_bouts_against_the_reference(api):
     blob = api.app.state.store.trace(body["run_id"])
     assert decode_string(blob)[1].shape == (decode(blob).shape[1], 17, 3)   # the string, frame by frame with the ducks
     assert submit(api, event="sprint-2m").json()["metric"] == "mean_finish_time"
+
+
+def test_a_heist_entry_is_stored_with_every_seeds_trace(api):
+    # Pinned fast: at 1.2 m/s the walker meets its end within seconds, whatever it is.
+    response = submit(api, event="sock-heist-6m", name="heist", command_vx="1.2")
+    assert response.status_code == 200, response.text
+    with np.load(io.BytesIO(api.app.state.store.trace(response.json()["run_id"]))) as loaded:
+        assert {f"{key}_{s}" for key in ("trace", "settle") for s in range(1, 6)} <= set(loaded.files)
+        assert "trace" not in loaded.files

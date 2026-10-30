@@ -54,16 +54,21 @@ from .constants import (
     TRACE_WIDTH,
 )
 from .course import compile_course, compile_stage, duck_prefix, ramp_dir
-from .manifest import Manifest
+from .lights import Red, timetable
+from .manifest import Manifest, Steering
 from .timeline import Start, Timeline
 
 _WORLD_DOWN = np.array([0.0, 0.0, -1.0])
+
+# How long a caught duck is simulated on with its motors off, so its replay shows it fall
+# and lie still. It changes no score (Plan C may retune it).
+COLLAPSE_S = 2.0
 
 
 @dataclass(frozen=True)
 class RunOutcome:
     seed: int
-    status: str  # "finish" | "fall" | "timeout"
+    status: str  # "finish" | "fall" | "timeout" | "caught" (moving under a red light)
     time_s: float | None
     progress_m: float
     # Where the start line landed in course coordinates, after settling. Exposed
@@ -75,6 +80,9 @@ class RunOutcome:
     # settle step, so a replay can start where the simulation did. Shaped as the
     # trace is, with settle steps + 1 frames.
     settle: np.ndarray
+    # The index in `trace` of the step a duck was caught on; its trace runs on
+    # COLLAPSE_S more seconds, past the time limit if need be.
+    caught_frame: int | None = None
 
 
 @dataclass(frozen=True)
@@ -282,16 +290,68 @@ def _start(
     return sim, settle, settle_points
 
 
+@dataclass(frozen=True)
+class _LightSteps:
+    """The giant's timetable laid over a run's timed control steps, indexed by step.
+
+    `red`: the duck is asked to stand during that step. `mark`: the giant
+    has just finished turning its head once that step is over, so where the duck
+    stands then is where it has to stay. `watch`: the giant is looking once that
+    step is over, so a duck that has strayed from its mark by then is caught.
+    """
+
+    red: np.ndarray
+    mark: np.ndarray
+    watch: np.ndarray
+
+    @classmethod
+    def of(cls, reds: tuple[Red, ...], turn: int, steps: int) -> "_LightSteps":
+        red, mark, watch = (np.zeros(steps, dtype=bool) for _ in range(3))
+        for r in reds:
+            # Step i ends at (i + 1) * CTRL_DT, so the step that ends as the giant
+            # faces the lanes, turn steps into the red, is onset + turn - 1:
+            # with no turn at all, the last green step. A first green is at least
+            # one step, so that is never below 0.
+            if r.onset + turn - 1 < steps:
+                mark[r.onset + turn - 1] = True
+            red[r.onset:r.onset + r.length] = True
+            watch[r.onset + turn:r.onset + r.length] = True
+        return cls(red=red, mark=mark, watch=watch)
+
+
+def _steered(steering: Steering, data, adr, command: np.ndarray) -> np.ndarray:
+    """`command` with its yaw rate turning the duck toward the lane's centre line
+    (y = 0) `lookahead_m` ahead of it, from where it stands at the start of this
+    control step: the state the duck observes (arena.manifest.Steering)."""
+    y = float(data.qpos[adr.free + 1])
+    w, qx, qy, qz = (float(v) for v in data.qpos[adr.free + 3:adr.free + 7])
+    yaw = np.arctan2(2.0 * (w * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz))
+    error = (np.arctan2(-y, steering.lookahead_m) - yaw + np.pi) % (2.0 * np.pi) - np.pi
+    steered = command.copy()
+    steered[2] = np.clip(steering.gain * error, -steering.max_yaw_rate, steering.max_yaw_rate)
+    return steered
+
+
 def run_once(manifest: Manifest, policy, seed: int, model=None, command=None) -> RunOutcome:
     # Converted once per run, not per step. The manifest holds an immutable tuple
     # so a loaded event cannot be mutated in place by anything downstream.
     #
     # `command` overrides it for one run, which is how the speed sweep works
-    # (see evaluate.py). The event still owns the shape of the command; a caller
-    # only gets to say how fast.
+    # (see evaluate.py). The event still owns the shape of the command; the
+    # sweep only gets to say how fast.
     command = np.asarray(manifest.command if command is None else command, dtype=np.float64)
     model = model if model is not None else compile_course(manifest)
-    sim, settle, _ = _start(manifest, model, [policy], [0.0], seed, [command])
+
+    # The giant's lights (arena.manifest.Lights): under a red light the duck
+    # is asked to stand, its command's twist zeroed and its head and body left as
+    # declared. It settles standing, too, on the line, and walks off when the
+    # clock starts on the first green: nobody gets a flying start.
+    lights = manifest.lights
+    stand = None
+    if lights is not None:
+        stand = command.copy()
+        stand[0:3] = 0.0
+    sim, settle, _ = _start(manifest, model, [policy], [0.0], seed, [command if stand is None else stand])
     data, adr = sim.data, sim.ducks[0].adr
 
     direction = ramp_dir(manifest.course.slope_deg)
@@ -299,21 +359,39 @@ def run_once(manifest: Manifest, policy, seed: int, model=None, command=None) ->
     max_steps = round(manifest.time_limit_s / CTRL_DT)
     fall_steps_needed = round(manifest.termination.fall_hold_s / CTRL_DT)
 
-    frames = np.empty((1, max_steps, TRACE_WIDTH), dtype=np.float32)
+    collapse_steps = round(COLLAPSE_S / CTRL_DT) if lights is not None else 0
+    frames = np.empty((1, max_steps + collapse_steps, TRACE_WIDTH), dtype=np.float32)
+    caught_frame = None
     tipped_for = 0
     status = "timeout"
     time_s = None
     progress = 0.0
     written = 0
 
+    if lights is not None:
+        schedule = _LightSteps.of(
+            timetable(lights, manifest.id, seed, max_steps), round(lights.turn_s / CTRL_DT), max_steps
+        )
+        mark = None
+    # A long lane's heading hold (arena.manifest.Steering) turns the duck on the
+    # steps it is asked to walk. Not in the settle, where it stands on the line,
+    # nor under a red light, where it is asked to stand still.
+    steering = manifest.steering
+
     def past_the_line() -> bool:
         return float(direction @ data.qpos[0:3]) - start_progress >= manifest.course.length_m
 
     for step in range(max_steps):
+        if lights is not None and schedule.red[step]:
+            asked = stand
+        elif steering is not None:
+            asked = _steered(steering, data, adr, command)
+        else:
+            asked = command
         # The line is timed to the physics step that crosses it (5 ms), not to
         # the control step it falls in (20 ms): a five-seed mean to the
         # millisecond rather than to 4 ms.
-        crossing = sim.step([command], past_the_line)
+        crossing = sim.step([asked], past_the_line)
         sim.record(frames[:, written])
         written += 1
 
@@ -335,11 +413,35 @@ def run_once(manifest: Manifest, policy, seed: int, model=None, command=None) ->
             status = "fall"
             break
 
+        # Caught is judged after the fall and before the finish: a duck the giant
+        # sees moving does not get to cross the line on that step. A duck still
+        # coasting while the giant turns its head is not seen, and if it crosses then
+        # it has finished.
+        if lights is not None:
+            here = data.qpos[adr.free:adr.free + 2]
+            if schedule.mark[step]:
+                mark = here.copy()
+            elif schedule.watch[step] and float(np.hypot(*(here - mark))) > lights.tolerance_m:
+                status = "caught"
+                caught_frame = written - 1
+                break
+
         progress = float(direction @ data.qpos[0:3]) - start_progress
         if crossing is not None:
             status = "finish"
             time_s = (step * DECIMATION + crossing + 1) * TIMESTEP
             break
+
+    # A caught duck's motors go off, its gearboxes left as the last drive wrote them
+    # (measured: it folds and lies still within a second): no policy, no servo drive.
+    if status == "caught":
+        data.ctrl[adr.act] = 0.0
+        for _ in range(collapse_steps):
+            for _ in range(DECIMATION):
+                mujoco.mj_step(model, data)
+            mujoco.mj_forward(model, data)
+            sim.record(frames[:, written])
+            written += 1
 
     return RunOutcome(
         seed=seed,
@@ -349,6 +451,7 @@ def run_once(manifest: Manifest, policy, seed: int, model=None, command=None) ->
         start_progress_m=start_progress,
         trace=frames[0, :written].copy(),
         settle=settle[0],
+        caught_frame=caught_frame,
     )
 
 

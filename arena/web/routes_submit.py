@@ -14,11 +14,10 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 
-from .. import trace as trace_codec
 from ..cast import cast_of, load_borrowed
 from ..constants import RUNNER_VERSION
 from ..envlink import EnvLinkError, normalise_env_url
-from ..evaluate import evaluate, evaluate_at, seed_row
+from ..evaluate import evaluate, evaluate_at, seed_row, trace_file
 from ..hub_fetch import FetchedPolicy, FetchError, fetch_policy, hub_name, parse_repo_ref
 from ..manifest import ManifestError, load_event
 from ..policy import PolicyError, load_policy
@@ -351,7 +350,7 @@ async def _enter(request, manifest, user, repo_id, revision, name, livery, comma
         cast=cast.record if cast else lone_cast(),
     )
     store.append(
-        record, trace_codec.encode(result.trace, result.settle, result.string, result.string_settle)
+        record, trace_file(result)
     )
 
     clips = request.app.state.clips

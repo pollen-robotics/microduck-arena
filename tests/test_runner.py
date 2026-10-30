@@ -1,4 +1,5 @@
 import dataclasses
+from hashlib import sha256
 
 import mujoco
 import numpy as np
@@ -9,6 +10,7 @@ from arena.actuator import Servos
 from arena.assets import ASSET_ROOT
 from arena.constants import CTRL_DT, DECIMATION, NUM_JOINTS, TIMESTEP, TRACE_WIDTH
 from arena.course import compile_course, compile_stage, duck_prefix, ramp_dir
+from arena.golden import PLATFORM
 from arena.manifest import load_event
 from arena.policy import load_policy
 from arena.runner import _Addresses, _Duck, _step, run_once, seed_rng
@@ -31,6 +33,20 @@ def sprint():
 @pytest.fixture(scope="module")
 def walker():
     return load_policy(REFERENCE)
+
+
+# The sprint's seed-1 run at STEADY_VX, hashed on this platform at 74104f6, before Sock Heist:
+# a lane without lights must stay that run bit for bit (scratchpad plan-a/collapse.py measured it).
+UNLIT = {"Darwin-arm64": ("614878b4b905b518e98d8c1eb0198651c504cd501708d76bbf9d74f18b4643a7",
+                          "a0c4efe15af6c16d00934d439f57c77e936a9114ba3da742e39c8b9abbb1b07e")}
+
+
+@pytest.mark.skipif(PLATFORM not in UNLIT, reason=f"no unlit run measured on {PLATFORM}")
+def test_a_lane_without_lights_runs_bit_for_bit_as_before(sprint, walker):
+    outcome = run_once(sprint, walker, seed=1, command=sprint.command_at(STEADY_VX))
+    assert outcome.status == "finish" and outcome.time_s == pytest.approx(14.45, abs=1e-9)
+    assert outcome.caught_frame is None
+    assert (sha256(outcome.trace.tobytes()).hexdigest(), sha256(outcome.settle.tobytes()).hexdigest()) == UNLIT[PLATFORM]
 
 
 def test_seed_rng_is_stable_across_processes(sprint):

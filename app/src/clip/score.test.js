@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { matchPlan } from "./match.js";
 import { clipPlan } from "./plan.js";
+import { quackOf } from "../heist-sound.js";
 import { clipScore, clipVerdict, matchScore } from "./score.js";
+
+/** A trace of `frames` frames, the trunk going from x 0 to `to`. */
+function walk(frames, to) {
+  const lane = new Float32Array(frames * 21);
+  for (let i = 0; i < frames; i++) lane[i * 21] = (to * i) / (frames - 1);
+  return lane;
+}
 
 const event = { id: "sprint-2m", length_m: 2, clip: { sounds: ["crowd", "horn", "verdict"] } };
 const trace = new Float32Array(200 * 21);
@@ -46,6 +54,14 @@ describe("clipScore", () => {
     expect(score.crowd).toMatchObject({ start: 3, end: 7, verdict: "pass" });
     expect(score.crowd.progress[0]).toEqual({ second: 3, value: 0 });
     expect(score.crowd.progress.at(-1).value).toBeGreaterThan(0.9);
+  });
+
+  it("follows the author's progress through a tape that runs on past its lane, holding its last frame", () => {
+    const plan = clipPlan(400, 60, 0); // a rival's 400 frames; the author's trace has 200
+    const { crowd } = clipScore({ run: { run_id: "R6", event, seeds_finished: 5 }, plan, trace, ducks: [] });
+    expect(crowd.progress.every((sample) => Number.isFinite(sample.value))).toBe(true);
+    expect(crowd.progress.at(-1).second).toBeCloseTo(3 + 8);
+    expect(crowd.progress.at(-1).value).toBeCloseTo(0.995);
   });
 
   it("falls after a DNF, and only plays the sources the event lists", () => {
@@ -138,4 +154,14 @@ describe("matchScore", () => {
     expect(score.crowd).toEqual({ start: 3, end: plan.tapeEnd / 25, verdict: "pass", progress: [] });
     expect(score.cues.map((cue) => cue.at)).toEqual([plan.tapeEnd / 25, plan.tapeEnd / 25 + 0.16]);
   });
+});
+
+it("quacks at each red and falls where each duck goes out, on the race's clock after the settle", () => {
+  const HEIST = { id: "sock-heist-6m", length_m: 6, time_limit_s: 60,
+    lights: { turn_s: 0.4, tolerance_m: 0.03, timetables: { 3: [[0.6, 1.6]] } }, clip: { sounds: ["giant"], tape_max_s: 60 } };
+  const plan = clipPlan(300, 60, 26); // the race clock starts at 3 + 26 × 0.02 = 3.52 s of tape
+  const lanes = [{ trace: walk(300, 6.05), caught: null }, { trace: walk(150, 2), caught: 50 }];
+  const { cues } = clipScore({ run: { run_id: "R5", event: HEIST, seeds_finished: 5, trace_seed: 3 }, plan, trace: walk(326, 6.05), ducks: [], lanes });
+  expect(cues.map((c) => [Number(c.at.toFixed(2)), c.quack ?? c.file, c.variant, c.rate]))
+    .toEqual([[4.12, true, quackOf(3, 0).variant, quackOf(3, 0).rate], [4.52, "microduck-fall.wav", undefined, undefined]]);
 });

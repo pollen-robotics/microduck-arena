@@ -15,7 +15,7 @@ describe("clipPlan", () => {
     expect(clipPlan(5000, 12, 26)).toMatchObject({ steps: 626, tape: 313 });
   });
 
-  it("shows the reset pose under the title, the settle and the tape at speed, and keeps the race running through the outro", () => {
+  it("shows the reset pose under the title, the settle and the tape, and keeps the race running through the outro", () => {
     const plan = clipPlan(200, 12, 26);
     expect(stepAt(plan, 0)).toBe(0);
     expect(stepAt(plan, 75)).toBe(0);
@@ -31,6 +31,12 @@ describe("clipPlan", () => {
   it("travels the camera through the title and settles on the chase before the start", () => {
     const plan = clipPlan(200, 12, 26);
     expect([0, 30, 60, 74, 75, 200].map((i) => travelAt(plan, i))).toEqual([0, 0.5, 1, 1, 1, 1]);
+  });
+
+  it("runs a lights clip's tape at life speed to its slowest lane, cut at the ceiling", () => {
+    expect(clipPlan(3000, 60, 26)).toMatchObject({ stride: 2, steps: 3026, tape: 1513 }); // every lane out of time: the limit
+    expect(clipPlan(3100, 60, 26)).toMatchObject({ steps: 3026 }); // a collapse past the limit is cut there
+    expect(clipPlan(200, 12, 26)).not.toHaveProperty("speed");
   });
 });
 

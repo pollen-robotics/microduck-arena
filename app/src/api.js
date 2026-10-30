@@ -64,7 +64,11 @@ async function frames(path) {
   // Raw little-endian float32 from the server, 21 values per frame, one duck after the other: a
   // stage sends every duck of its troupe (X-Duck-Count), a lane its one duck.
   const ducks = Number(response.headers.get("X-Duck-Count") ?? 1);
-  return splitDucks(new Float32Array(await response.arrayBuffer()), ducks);
+  const caught = response.headers.get("X-Caught-Frame");
+  // `caught`: the frame a Sock Heist seed's duck was caught on, null when it was not (and on every other event).
+  return Object.assign(splitDucks(new Float32Array(await response.arrayBuffer()), ducks), {
+    caught: caught === null ? null : Number(caught),
+  });
 }
 
 /** A tug's string, 17 points a frame: the untimed settle's frames, then the timed ones. */
@@ -76,16 +80,18 @@ async function points(path) {
   return { settle: all.slice(0, settled), trace: all.slice(settled) };
 }
 
-/** A run's trace, one per duck, in duck order: a lane's is its one duck. */
-export function getTrace(runId) {
-  return frames(`/api/runs/${runId}/trace`);
+const seeded = (path, seed) => (seed == null ? path : `${path}?seed=${seed}`);
+
+/** A run's trace, one per duck, in duck order: a lane's is its one duck. A Sock Heist run plays one `seed` of its five. */
+export function getTrace(runId, seed) {
+  return frames(seeded(`/api/runs/${runId}/trace`, seed));
 }
 
 export const getString = (runId) => points(`/api/runs/${runId}/string`);
 
 /** The untimed settle before a run's trace, from the reset pose, one per duck; empty for a run stored before settles were recorded. */
-export function getSettle(runId) {
-  return frames(`/api/runs/${runId}/settle`);
+export function getSettle(runId, seed) {
+  return frames(seeded(`/api/runs/${runId}/settle`, seed));
 }
 
 /** Take one of your own entries off the board. Not a delete — see the server. */
