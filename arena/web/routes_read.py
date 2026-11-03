@@ -24,7 +24,7 @@ from ..course import (
 from ..cup import reached
 from ..cupworker import all_cups
 from ..evaluate import seed_row
-from ..index import leaderboard, standing
+from ..index import copies, leaderboard, standing
 from ..lights import served
 from ..manifest import Manifest, ManifestError, all_events, load_event
 from ..points import boards_by_user, receipts, revealed_final, standings
@@ -132,6 +132,11 @@ def _event_or_404(event_id: str) -> Manifest:
 
 def _withdrawn(store) -> frozenset[str]:
     return frozenset(w.run_id for w in store.withdrawals())
+
+
+def _copy_of(original: RunRecord | None) -> dict | None:
+    """The run a copy races exactly like (arena.index.copies), named the way a page links to it."""
+    return None if original is None else {"user": original.user, "run_id": original.run_id}
 
 
 def _voted() -> dict:
@@ -264,6 +269,7 @@ def player_page(user: str, request: Request) -> dict:
     )
     events = {m.id: m for m in all_events()}
     seen = store.seen()
+    copied = copies(runs)
     by_event: dict[str, list[RunRecord]] = defaultdict(list)
     for run in runs:
         by_event[run.event_id].append(run)
@@ -293,6 +299,7 @@ def player_page(user: str, request: Request) -> dict:
             "rank": (row.rank if row else None) if voted else place.rank,
             "on_board": row is not None if voted else place.on_board,
             "withdrawn": run.run_id in withdrawn,
+            "copy_of": _copy_of(copied.get(run.run_id)),
             "submitted_at": run.submitted_at,
             "seen": run.run_id in seen,
             # None off a timed event, a rate and a count off a voted one — so the
@@ -372,6 +379,7 @@ def run_detail(run_id: str, request: Request) -> dict:
         "robot_command": record.robot_command,
         "env_url": record.env_url,
         "withdrawn": record.run_id in withdrawn,
+        "copy_of": _copy_of(copies(store.runs(record.event_id)).get(record.run_id)),
         "on_board": on_board,
         "rank": rank,
         # The same columns as the event's board: the page draws the same table.

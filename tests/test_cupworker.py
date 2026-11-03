@@ -95,9 +95,18 @@ def test_entrants_are_each_players_latest_entry_at_close():
     assert (got[0].source, got[0].model_sha256, got[0].livery) == (edge.source, edge.model_sha256, edge.livery)
 
 
+def test_a_copy_is_never_entered_and_its_player_plays_their_own_latest_entry():
+    run = lambda user, at, score: make_record(event_id="tug-of-war", user=user, submitted_at=at, score=score)
+    own = run("dadudu", "2026-10-28T09:00:00Z", 160.0)
+    leader, copy = run("jrubiosainz", "2026-10-29T09:00:00Z", 166.5), run("dadudu", "2026-10-29T10:00:00Z", 166.5)
+    got = entrants_at([own, leader, copy], frozenset(), datetime(2026, 10, 30, 15, tzinfo=UTC))
+    assert [(e.user, e.run_id) for e in got] == [("jrubiosainz", leader.run_id), ("dadudu", own.run_id)]
+
+
 def test_two_entrants_with_one_policy_name_air_under_their_handles():
-    run = lambda user, name: make_record(event_id="tug-of-war", user=user, policy_name=name, submitted_at="2026-10-29T09:00:00Z")
-    got = entrants_at([run("ann", "microduck-tug-of-war"), run("bob", "microduck-tug-of-war"), run("cat", "Tank")],
+    run = lambda user, name, score: make_record(event_id="tug-of-war", user=user, policy_name=name, score=score,
+                                                submitted_at="2026-10-29T09:00:00Z")
+    got = entrants_at([run("ann", "microduck-tug-of-war", 3.0), run("bob", "microduck-tug-of-war", 2.0), run("cat", "Tank", 1.0)],
                       frozenset(), datetime(2026, 10, 30, 15, tzinfo=UTC))
     assert {e.user: e.name for e in got} == {
         "ann": "microduck-tug-of-war (@ann)", "bob": "microduck-tug-of-war (@bob)", "cat": "Tank"}

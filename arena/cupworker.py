@@ -34,6 +34,7 @@ from .cup import (
     round_name,
 )
 from .hub_fetch import fetch_policy
+from .index import copies
 from .live import SHUTTER_MS
 from .manifest import Manifest, all_events
 from .match import bout_seed, play_match
@@ -72,10 +73,14 @@ def all_cups(store: Store) -> list[Cup]:
 
 def entrants_at(records: Iterable[RunRecord], withdrawn: frozenset[str], close_at: datetime,
                 runner_version: int = RUNNER_VERSION) -> list[Entrant]:
-    """Each player's latest entry at close, not withdrawn, on the runner; two ducks of one policy name air under their handles."""
+    """Each player's latest entry at close, not withdrawn, not a copy, on the runner; two ducks of one policy name air
+    under their handles."""
     close, latest = iso(close_at), {}
-    for record in sorted(records, key=lambda r: (r.submitted_at, r.run_id)):
-        if record.submitted_at <= close and record.run_id not in withdrawn and record.runner_version == runner_version:
+    records = sorted(records, key=lambda r: (r.submitted_at, r.run_id))
+    copied = copies(records)
+    for record in records:
+        if (record.submitted_at <= close and record.run_id not in withdrawn and record.run_id not in copied
+                and record.runner_version == runner_version):
             latest[record.user] = record
     names = Counter(record.policy_name for record in latest.values())
     ducks = [Entrant(r.user, r.run_id, r.policy_name, r.livery, r.score, r.model_sha256, r.source,

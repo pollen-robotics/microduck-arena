@@ -11,17 +11,17 @@ from arena.points import Receipt
 from tests.test_store import WALKER, make_record
 
 
-def seeds(finished, total=5, status="fall"):
+def seeds(finished, total=5, status="fall", time_s=12.0):
     return tuple(
         SeedResult(seed=i + 1, status="finish" if i < finished else status,
-                   time_s=12.0 if i < finished else None)
+                   time_s=time_s if i < finished else None)
         for i in range(total)
     )
 
 
 def run(user, score, at, finished=5, event="sprint-2m", run_id=None, **more):
     fields = {"user": user, "score": score, "submitted_at": at, "seeds_finished": finished,
-              "per_seed": seeds(finished), "event_id": event, "policy_name": f"{user}-v1"}
+              "per_seed": seeds(finished, time_s=score), "event_id": event, "policy_name": f"{user}-v1"}
     if run_id:
         fields["run_id"] = run_id
     fields.update(more)

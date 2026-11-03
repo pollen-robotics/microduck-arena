@@ -1043,6 +1043,7 @@ table.board .withdraw:focus-visible,
 .run-byline { margin: 0; color: var(--ink-70); }
 .run-byline a { color: var(--sky-inked); }
 .run-byline .sticker { font-size: 0.7rem; padding: 2px 8px; }
+.run-byline a.sticker { color: var(--ink); }
 
 /* Hidden, and still holding its place.
  *

@@ -25,5 +25,12 @@ votes does not trigger this bonus.
 100 points. You need at least one finish; vote-ranked entries also need an
 active vote. Publication bonuses do not require a finish.
 
+**A copy earns nothing.** A run with exactly the same result on every seed as an
+earlier run by another player is that player's policy entered again, whatever its
+file holds. It takes no place on the board, earns no points and plays no cup; its
+page names the run it copies. MicroDuck Got a Talent is exempt: the same policy
+with another timeline is another performance.
+
 **Your total can decrease** when voting points expire, you lose a podium place,
-or a run is withdrawn or no longer eligible under the current scoring version.
+or a run is withdrawn, found to be a copy, or no longer eligible under the
+current scoring version.

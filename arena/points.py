@@ -18,7 +18,7 @@ from datetime import datetime
 from . import votes
 from .constants import RUNNER_VERSION
 from .cup import Cup, MatchRecord, iso, reached, revealed_at
-from .index import by_user, leaderboard, sort_key
+from .index import by_user, copies, leaderboard, sort_key
 from .manifest import Vote
 from .store import RunRecord
 
@@ -98,10 +98,11 @@ def boards_by_user(
 def counting(
     records, withdrawn: frozenset[str], runner_version: int = RUNNER_VERSION
 ) -> list[RunRecord]:
-    """The runs that count, oldest first. Exactly the board's filter."""
+    """The runs that count, oldest first. Exactly the board's filter: a copy counts for nothing."""
+    copied = copies(records)
     kept = [
         r for r in records
-        if r.runner_version == runner_version and r.run_id not in withdrawn
+        if r.runner_version == runner_version and r.run_id not in withdrawn and r.run_id not in copied
     ]
     return sorted(kept, key=lambda r: (r.submitted_at, r.run_id))
 

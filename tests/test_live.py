@@ -49,8 +49,8 @@ def entry(run_id, at="2026-09-10T10:00:00Z", replay_ms=8000, user="alice"):
 
 def test_the_pool_is_ready_clips_that_are_not_withdrawn(tmp_path):
     store = LocalStore(tmp_path)
-    for run_id in ("A", "B", "C", "D"):
-        store.append(make_record(run_id=run_id, event_id="sprint-2m", user=run_id.lower()), b"t")
+    for score, run_id in enumerate(("A", "B", "C", "D"), 20):
+        store.append(make_record(run_id=run_id, event_id="sprint-2m", user=run_id.lower(), score=score), b"t")
     clip = lambda seconds: json.dumps({"rendered_at": "2026-09-16T10:05:00Z",
                                        "layouts": {"landscape": {"seconds": seconds}}}).encode()
     # A commentary file sitting in the clip folder is not read by the pool at
@@ -70,6 +70,17 @@ def test_the_pool_is_ready_clips_that_are_not_withdrawn(tmp_path):
     assert entries["A"] == Entry("A", "a", "2 m Sprint", "2026-09-03T10:00:00Z", 8000,
                                  "20260916T100500Z")
     assert entries["B"].replay_ms == 13800
+
+
+def test_a_copy_never_airs(tmp_path):
+    """Nor does the booth write for it: off the board as if withdrawn, it is off the channel too."""
+    store = LocalStore(tmp_path)
+    store.append(make_record(run_id="A", user="rumezhak", submitted_at="2026-11-03T09:00:00Z"), b"t")
+    store.append(make_record(run_id="B", user="jrubiosainz", submitted_at="2026-11-03T09:19:00Z"), b"t")
+    for run_id in ("A", "B"):
+        store.put_clip(run_id, {"clip.json": json.dumps({"rendered_at": "2026-11-03T10:05:00Z",
+                                                         "layouts": {"landscape": {"seconds": 8.0}}}).encode()})
+    assert [e.run_id for e in pool(store, datetime(2026, 11, 4, tzinfo=UTC))] == ["A"]
 
 
 def test_a_cycle_opens_on_the_three_newest_and_shuffles_the_rest_by_its_number():
@@ -539,7 +550,8 @@ def test_a_cups_matches_join_the_shuffled_rest_and_the_newest_runs_still_open_th
     store, cup = LocalStore(tmp_path), played_cup(4, starts_at=START_ISO)
     store_cup(store, cup)
     for i in range(5):
-        store.append(make_record(run_id=f"S{i}", user=f"u{i}", submitted_at=f"2026-10-2{i}T10:00:00Z"), b"t")
+        store.append(make_record(run_id=f"S{i}", user=f"u{i}", score=10.0 + i,
+                                 submitted_at=f"2026-10-2{i}T10:00:00Z"), b"t")
         store.put_clip(f"S{i}", {"clip.json": json.dumps({"layouts": {"landscape": {"seconds": 8.0}}}).encode()})
     entries = pool(store, ends_at(cup))
     matches = [e for e in entries if e.title is not None]
@@ -694,7 +706,9 @@ def test_two_cups_of_one_event_serve_their_own_show(tmp_path, monkeypatch):
 
 
 def ready(app, run_id, user="alice", seconds=8.0):
-    app.state.store.append(make_record(run_id=run_id, user=user), encode(np.zeros((5, 21), "f4")))
+    # Each in a time of its own: two players' runs that raced alike would be one policy, copied.
+    score = 10.0 + len(app.state.store.runs("sprint-2m"))
+    app.state.store.append(make_record(run_id=run_id, user=user, score=score), encode(np.zeros((5, 21), "f4")))
     app.state.store.put_clip(run_id, {"clip.json": json.dumps({"layouts": {"landscape": {"seconds": seconds}}}).encode()})
 
 

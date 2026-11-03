@@ -89,6 +89,15 @@ def test_withdrawn_and_old_runner_runs_pay_nothing():
     assert receipts([gone, old], frozenset({gone.run_id})) == []
 
 
+def test_a_copy_pays_nothing_and_leaves_the_podium_to_the_next_player():
+    leader = make_record(user="rumezhak", score=4.937, submitted_at="2026-11-03T09:00:00Z")
+    copy = make_record(user="jrubiosainz", score=4.937, submitted_at="2026-11-03T09:19:00Z")
+    third = make_record(user="lphatnguyen", score=4.987, submitted_at="2026-11-02T19:00:00Z")
+    rs = receipts([leader, copy, third], frozenset())
+    assert [r for r in rs if r.source_id == copy.run_id] == []
+    assert [(r.user, r.points) for r in acts(rs, "podium")] == [("rumezhak", 250), ("lphatnguyen", 150)]
+
+
 def test_receipts_carry_the_runs_own_timestamp():
     run = make_record(user="alice", submitted_at="2026-09-03T09:30:00Z")
     assert {r.at for r in receipts([run], frozenset())} == {"2026-09-03T09:30:00Z"}

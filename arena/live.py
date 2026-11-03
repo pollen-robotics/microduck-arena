@@ -14,6 +14,7 @@ from datetime import datetime
 
 from .broadcasts import BroadcastBook, utcnow
 from .cup import cup_title, ends_at, iso, match_title, parse_iso, revealed_at
+from .index import copies
 from .manifest import all_events
 from .store import clip_version
 
@@ -74,7 +75,7 @@ def _ready(store, clip_id: str) -> tuple[int, str] | None:
 
 
 def pool(store, now: datetime) -> list[Entry]:
-    """Every run with a ready clip, not withdrawn, and the matches of each
+    """Every run with a ready clip, not withdrawn and not a copy, and the matches of each
     event's last cup once it has aired, until the event's next cup starts."""
     from .cupworker import all_cups  # not at the top: cupworker reads SHUTTER_MS from this module
 
@@ -82,8 +83,10 @@ def pool(store, now: datetime) -> list[Entry]:
     cups = all_cups(store)
     entries = []
     for manifest in all_events():
-        for record in store.runs(manifest.id):
-            ready = None if record.run_id in withdrawn else _ready(store, record.run_id)
+        records = store.runs(manifest.id)
+        off = withdrawn | copies(records).keys()
+        for record in records:
+            ready = None if record.run_id in off else _ready(store, record.run_id)
             if ready is not None:
                 entries.append(Entry(record.run_id, record.user, manifest.title, record.submitted_at, *ready))
         started = [cup for cup in cups if cup.event_id == manifest.id

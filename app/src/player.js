@@ -154,6 +154,12 @@ function cupList(cups) {
   return list;
 }
 
+/** A publication's name, and why it holds no row when it was withdrawn or races like someone else's run. */
+function note(pub) {
+  if (pub.withdrawn) return `${pub.policy_name} · withdrawn`;
+  return pub.copy_of ? `${pub.policy_name} · copy of @${pub.copy_of.user}` : pub.policy_name;
+}
+
 /** One event's publications, newest first, each the way to its own page. */
 function results(publications, player, me) {
   const list = el("ul", "profile-results");
@@ -172,7 +178,7 @@ function results(publications, player, me) {
       : formatScore(pub.score, { finished: pub.seeds_finished, metric: pub.metric });
     link.append(
       el("strong", null, `#${pub.rank ?? "—"} · ${earned}`),
-      el("span", "mono-label", pub.withdrawn ? `${pub.policy_name} · withdrawn` : pub.policy_name),
+      el("span", "mono-label", note(pub)),
       el("span", "profile-date", pub.submitted_at.slice(0, 10)),
     );
     item.append(link);

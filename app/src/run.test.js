@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { featuring, flipScore, receiptCard, replayLine, runHall, seedText, verdict } from "./run.js";
+import { featuring, flipScore, offBoard, receiptCard, replayLine, runHall, seedText, verdict } from "./run.js";
 
 const STAGE = { title: "MicroDuck Got a Talent", course: "stage", metric: "votes" };
 const TUG = { id: "tug-of-war", title: "Tug of War", course: "tug", metric: "mean_ground_cm", bout: { time_limit_s: 45 } };
@@ -105,5 +105,19 @@ describe("a troupe's credits", () => {
 
   it("credits nobody when every duck is the author's own", () => {
     expect(featuring([{ policy: "self" }, { policy: "self" }])).toBeNull();
+  });
+});
+
+describe("a run off the board", () => {
+  it("names the run a copy races exactly like, and leads to it", () => {
+    const sticker = offBoard({ on_board: false, withdrawn: false, copy_of: { user: "rumezhak", run_id: "R0" } });
+    expect(sticker.textContent).toBe("copy of @rumezhak");
+    expect(sticker.getAttribute("href")).toBe("#/r/R0");
+    expect(sticker.classList.contains("sticker")).toBe(true);
+  });
+  it("says withdrawn, or not on the board, and nothing for a run on it", () => {
+    expect(offBoard({ on_board: false, withdrawn: true, copy_of: null }).textContent).toBe("withdrawn");
+    expect(offBoard({ on_board: false, withdrawn: false, copy_of: null }).textContent).toBe("not on the board");
+    expect(offBoard({ on_board: true, withdrawn: false, copy_of: null })).toBeNull();
   });
 });

@@ -645,6 +645,18 @@ def test_a_run_detail_carries_its_place_its_receipts_and_its_event(client):
     assert "frames" not in body
 
 
+def test_a_copy_names_the_run_it_copies_on_its_page_and_on_its_players(client):
+    api, app = client
+    original = record_run(app, user="rumezhak", score=4.937, submitted_at="2026-11-03T09:00:00Z")
+    copy = record_run(app, user="jrubiosainz", score=4.937, submitted_at="2026-11-03T09:19:00Z")
+    body = api.get(f"/api/runs/{copy.run_id}").json()
+    assert (body["on_board"], body["receipts"]) == (False, [])
+    assert body["copy_of"] == {"user": "rumezhak", "run_id": original.run_id}
+    assert api.get(f"/api/runs/{original.run_id}").json()["copy_of"] is None
+    [pub] = api.get("/api/players/jrubiosainz").json()["publications"]
+    assert pub["copy_of"] == {"user": "rumezhak", "run_id": original.run_id}
+
+
 def test_a_run_page_reads_no_cup(client, monkeypatch):
     """A cup's receipts are paid to its deciding matches, never to a run: the run page has nothing to read there."""
     api, app = client

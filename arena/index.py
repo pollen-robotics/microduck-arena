@@ -10,12 +10,15 @@ matter how many policies you try — so locally the entrant is the POLICY, and
 `walker-v1` races `walker-v2`. Same ranking arithmetic either way; only the key
 differs. `by_user` is the default so the public semantics are what you get
 unless a caller deliberately asks otherwise.
+
+**A copy holds no place.** A run that races exactly like an earlier run of
+someone else is that run entered again, and is off the board as if withdrawn.
 """
 
 from dataclasses import dataclass
 
 from .constants import RUNNER_VERSION
-from .manifest import higher_wins
+from .manifest import higher_wins, staged
 from .store import RunRecord
 
 
@@ -45,6 +48,29 @@ def by_policy(record: RunRecord) -> tuple[str, str]:
 ENTRANTS = {"user": by_user, "policy": by_policy}
 
 
+def copies(records) -> dict[str, RunRecord]:
+    """Every run that races exactly like an earlier run of another person, with that run.
+
+    The physics is deterministic, so a policy races the same every time it is entered: the same
+    results seed by seed, to the millisecond, are the same policy whatever its bytes are. A file
+    entered again with one more metadata field, or a branch of its graph that never fires, races
+    like the one it was taken from. The first run to race that way is the original.
+
+    Races only: on a stage the same weights with another timeline are another performance. And a
+    run has to finish a seed: a fall carries no time, so two policies that both fall on every
+    seed would look alike.
+    """
+    first: dict = {}
+    out = {}
+    for record in sorted(records, key=lambda r: (r.submitted_at, r.run_id)):
+        if record.seeds_finished == 0 or staged(record.event_id):
+            continue
+        original = first.setdefault((record.event_id, record.runner_version, record.per_seed), record)
+        if original.user != record.user:
+            out[record.run_id] = original
+    return out
+
+
 def leaderboard(
     records,
     runner_version: int = RUNNER_VERSION,
@@ -57,13 +83,14 @@ def leaderboard(
     append-only: a withdrawal is one more immutable write, and the run it
     withdraws stays on disk. A withdrawn run also loses to nothing — it is not
     merely outranked, it is absent — so it cannot keep a better run of the same
-    entrant off the board.
+    entrant off the board. Nor does a copy, which is withdrawn by the rule.
     """
+    copied = copies(records)
     best: dict = {}
     for record in records:
         if record.runner_version != runner_version:
             continue  # a different physics; never comparable
-        if record.run_id in withdrawn:
+        if record.run_id in withdrawn or record.run_id in copied:
             continue
         key = entrant(record)
         current = best.get(key)

@@ -738,3 +738,12 @@ def higher_wins(event_id: str) -> bool:
         return load_event(event_id).metric in HIGHER_WINS
     except ManifestError:
         return False
+
+
+@functools.cache
+def staged(event_id: str) -> bool:
+    """True when the event is a stage: what it is entered with is performed, not raced."""
+    try:
+        return load_event(event_id).course.kind == "stage"
+    except ManifestError:
+        return False

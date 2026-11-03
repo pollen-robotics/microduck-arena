@@ -13,7 +13,7 @@ import { formatSpeed, isStage, isTug } from "./format.js";
 import { colourLanes, lanesFor } from "./lanes.js";
 import { onDuckPanel, onWheels, popFrom } from "./onduck.js";
 import { climbPlan, reveal, revealFor, setRanks } from "./reveal.js";
-import { dress, guideHref, playerHref, raceHref } from "./router.js";
+import { dress, guideHref, playerHref, raceHref, runHref } from "./router.js";
 import { shareStrip, wireShare } from "./share.js";
 import { footer, signage } from "./signage.js";
 import { load as loadSounds } from "./sound.js";
@@ -117,6 +117,20 @@ export function featuring(cast) {
 }
 
 /**
+ * Why a run holds no row on its board, as a sticker beside its byline; null when it holds one.
+ * A copy races exactly like an earlier run of someone else's, and leads to it.
+ */
+export function offBoard(run) {
+  if (run.withdrawn) return el("span", "sticker sticker-magenta", "withdrawn");
+  if (run.copy_of) {
+    const link = el("a", "sticker", `copy of @${run.copy_of.user}`);
+    link.href = runHref(run.copy_of.run_id);
+    return link;
+  }
+  return run.on_board ? null : el("span", "sticker", "not on the board");
+}
+
+/**
  * The page's frame, as a detached element — DOM a test can exercise rather
  * than code it can only read, as raceHall is.
  *
@@ -187,8 +201,8 @@ export async function renderRun(root, runId, state) {
   const scoringHelp = el("a", null, "How points work");
   scoringHelp.href = guideHref("points");
   $("byline").append(" · ", scoringHelp);
-  if (run.withdrawn) $("byline").append(" · ", el("span", "sticker sticker-magenta", "withdrawn"));
-  else if (!run.on_board) $("byline").append(" · ", el("span", "sticker", "not on the board"));
+  const off = offBoard(run);
+  if (off) $("byline").append(" · ", off);
   // What you can take away sits with who made it: one line, no section of its own.
   if (run.offers_download) {
     const grab = el("a", null, "Download .onnx");

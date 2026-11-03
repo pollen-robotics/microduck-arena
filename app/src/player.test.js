@@ -76,6 +76,15 @@ describe("a player's profile", () => {
   });
 });
 
+describe("a copy among the publications", () => {
+  it("names whose run it races exactly like", () => {
+    const copy = { ...ann.publications[1], run_id: "c1", rank: 2, on_board: false,
+                   copy_of: { user: "rumezhak", run_id: "R0" } };
+    const el = profile({ ...ann, publications: [copy] });
+    expect(el.querySelector(".profile-results a .mono-label").textContent).toBe("v2 · copy of @rumezhak");
+  });
+});
+
 describe("a voted event's best row", () => {
   it("says how it is rated, not a finish time", () => {
     const player = {

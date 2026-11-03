@@ -18,7 +18,6 @@ def make_record(**overrides) -> RunRecord:
         "model_sha256": "a" * 64,
         "score": 21.5,
         "seeds_finished": 5,
-        "per_seed": (SeedResult(seed=1, status="finish", time_s=21.5),),
         "trace_seed": 1,
         # RUNNER_VERSION and not a literal: a fixture pinned to 1 silently
         # disappears from every leaderboard test the next time it is bumped.
@@ -26,6 +25,9 @@ def make_record(**overrides) -> RunRecord:
         "command_vx": 0.4,
     }
     fields.update(overrides)
+    # A run's seed is raced in its own score: two runs that score apart raced apart, as on the
+    # Space, where two that raced alike are one policy (arena.index.copies).
+    fields.setdefault("per_seed", (SeedResult(seed=1, status="finish", time_s=fields["score"]),))
     return RunRecord(**fields)
 
 
