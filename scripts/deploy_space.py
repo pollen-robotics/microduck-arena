@@ -38,6 +38,8 @@ IGNORE = [
     ".pytest_cache/**",
     ".ruff_cache/**",
     "arena-board/**",
+    # Pollen's private dashboard is its own Space (.github/workflows/deploy-dashboard.yml).
+    "dashboard/**",
 ]
 # .dockerignore is NOT here on purpose: the Space builds the image, so it needs
 # the file that tells the build what to leave out.

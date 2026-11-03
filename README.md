@@ -86,6 +86,14 @@ publishing author's own Hub repo, not on the Space. `GET /api/health` reports
 `"durable": true` once it is configured, and the startup log says `EPHEMERAL`
 in capitals when it is not.
 
+The pages report how they are used — each page view, each link that leaves the site, the
+time a page was on screen — with a random id per browser and no name (`app/src/usage.js`).
+The Space writes them in batches every ten minutes to `ARENA_USAGE_DATASET` (a variable,
+e.g. `pollen-robotics/microduck-arena-usage`, written with `HF_TOKEN`); without it they go
+to the store folder. Pollen's private dashboard (`dashboard/`, deployed to
+`pollen-robotics/microduck-arena-dashboard` by `.github/workflows/deploy-dashboard.yml`)
+draws them next to the run log's players and voters.
+
 An entry arrives from `uv run publish --enter`, from the workshop or a shell,
 with the entrant's Hugging Face token (in practice a write token, the one
 `publish` uploads with). The Space asks the Hub's whoami-v2 whose token it is,

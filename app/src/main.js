@@ -11,6 +11,7 @@ import { renderRun } from "./run.js";
 import { parseRoute } from "./router.js";
 import { renderVote } from "./vote.js";
 import { renderGuides } from "./guides.js";
+import { trackUsage } from "./usage.js";
 import { HALLOWEEN, decoratePage } from "./halloween.js";
 
 const root = document.querySelector("#app");
@@ -80,3 +81,4 @@ async function show() {
 if (HALLOWEEN) decoratePage();
 addEventListener("hashchange", show);
 show();
+trackUsage();

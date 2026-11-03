@@ -13,6 +13,7 @@ from pathlib import Path
 from ..clips import JOB_FLAVOR, JOBS_AT_ONCE
 from ..index import ENTRANTS
 from ..store import HubBallots, HubStore, LocalBallots, LocalStore
+from ..usage import UsageLog, to_folder, to_hub
 from .oauth import OAuthSettings
 
 DEFAULT_STORE = Path("arena-board")
@@ -69,6 +70,10 @@ class ArenaConfig:
     # token that can write to it.
     dataset_repo: str | None = None
     hf_token: str | None = None
+    # The dataset repo the usage log (arena/usage.py) writes to, with HF_TOKEN, or None for the
+    # store's own folder. Not the run log's: a usage batch every few minutes would set the store
+    # refreshing.
+    usage_dataset: str | None = None
     # Reconcile the board against the Hub at startup: race whatever has been
     # published there and is missing here.
     #
@@ -174,6 +179,7 @@ class ArenaConfig:
             rank_by=ranking,
             dataset_repo=(os.environ.get("ARENA_DATASET") or "").strip() or None,
             hf_token=(os.environ.get("HF_TOKEN") or "").strip() or None,
+            usage_dataset=(os.environ.get("ARENA_USAGE_DATASET") or "").strip() or None,
             recover_on_boot=(os.environ.get("ARENA_RECOVER") or "").strip() in {"1", "true", "yes"},
             oauth=oauth,
             session_secret=secret,
@@ -255,3 +261,8 @@ class ArenaConfig:
         if self.dataset_repo and self.hf_token:
             return HubBallots(self.dataset_repo, token=self.hf_token)
         return LocalBallots(self.ensure_store())
+
+    def build_usage(self) -> UsageLog:
+        if self.usage_dataset and self.hf_token:
+            return UsageLog(to_hub(self.usage_dataset, self.hf_token))
+        return UsageLog(to_folder(self.ensure_store()))

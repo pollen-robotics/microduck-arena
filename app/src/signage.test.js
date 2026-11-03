@@ -133,7 +133,7 @@ describe("footer", () => {
     expect(flock.textContent).toBe("Join the flock");
     expect(flock.href).toContain("discord.com/invite/pollen-community");
     expect(store.textContent).toBe("Get your real microduck");
-    expect(store.href).toBe("https://store.pollen-robotics.com/products/microduck");
+    expect(store.href).toBe("https://store.pollen-robotics.com/products/microduck?utm_source=microduck-arena&utm_medium=referral");
     for (const link of el.querySelectorAll("a")) {
       expect(link.target).toBe("_blank");
       expect(link.rel).toBe("noopener");

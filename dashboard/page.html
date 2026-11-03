@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arena usage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --page: #faf8f2; --surface: #fcfcfb; --ink: #101018;
+  --text: #0b0b0b; --text-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11, 11, 11, 0.10);
+  --up: #006300; --down: #d03b3b;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6;
+  --yellow: #ffd23f; --orange: #ff7a2f;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19;
+    --text: #f0efec; --text-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255, 255, 255, 0.10);
+    --up: #0ca30c; --down: #e66767;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19;
+  --text: #f0efec; --text-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255, 255, 255, 0.10);
+  --up: #0ca30c; --down: #e66767;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--text);
+       font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { background: var(--ink); padding: 18px 16px; }
+header h1 { margin: 0; font: 400 30px/1 Anton, sans-serif; letter-spacing: 0.02em; color: var(--yellow); }
+header h1 span { color: var(--orange); }
+header p { margin: 6px 0 0; color: #c3c2b7; font-size: 13px; }
+main { max-width: 1180px; margin: 0 auto; padding: 16px; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.filters button { font: inherit; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+                  border: 1px solid var(--ring); background: var(--surface); color: var(--text-2); }
+.filters button[aria-pressed="true"] { background: var(--text); color: var(--page); border-color: var(--text); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.tile, .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 14px 16px; }
+.tile .label { color: var(--text-2); }
+.tile .value { font-size: 30px; font-weight: 600; margin: 2px 0; }
+.tile .note { color: var(--muted); font-size: 12px; }
+.delta-up { color: var(--up); } .delta-down { color: var(--down); }
+h2 { font: 400 22px/1 Anton, sans-serif; letter-spacing: 0.02em; margin: 32px 0 4px; }
+.lede { color: var(--text-2); margin: 0 0 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 12px; }
+.card h3 { margin: 0 0 2px; font-size: 15px; }
+.card .sub { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.plot { position: relative; height: 240px; }
+details { margin-top: 8px; color: var(--text-2); font-size: 12px; }
+summary { cursor: pointer; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--grid); }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 500; }
+.wide { overflow-x: auto; }
+.empty { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Microduck <span>Arena</span> · usage</h1>
+  <p id="built"></p>
+</header>
+<main>
+  <div class="filters" role="group" aria-label="Period" id="filters"></div>
+  <div class="tiles" id="tiles"></div>
+
+  <h2>Audience</h2>
+  <p class="lede" id="audience-lede"></p>
+  <div class="grid">
+    <div class="card"><h3>Visitors per day</h3><p class="sub">A visitor is one browser. New: first day it was seen.</p><div class="plot"><canvas id="visitors"></canvas></div></div>
+    <div class="card"><h3>Clicks on a link to the store</h3><p class="sub">"Buy Microduck" and "Get your real microduck", per day.</p><div class="plot"><canvas id="buys"></canvas></div></div>
+    <div class="card"><h3>Minutes looked per visit</h3><p class="sub">Time the page was on screen, per page load, per day.</p><div class="plot"><canvas id="minutes"></canvas></div></div>
+    <div class="card"><h3>Pages per visit</h3><p class="sub">Pages viewed per page load, per day.</p><div class="plot"><canvas id="pages"></canvas></div></div>
+  </div>
+  <div class="grid" style="margin-top:12px">
+    <div class="card"><h3>Pages viewed</h3><p class="sub">Over the period.</p><div class="wide" id="t-pages"></div></div>
+    <div class="card"><h3>Links followed out</h3><p class="sub">Over the period.</p><div class="wide" id="t-outs"></div></div>
+    <div class="card"><h3>Where visits came from</h3><p class="sub">The referring site; huggingface.co is the Space's own page.</p><div class="wide" id="t-referrers"></div></div>
+    <div class="card"><h3>Devices</h3><p class="sub">Visits, by screen and by address.</p><div class="wide" id="t-devices"></div></div>
+  </div>
+
+  <h2>Community</h2>
+  <p class="lede">Players published a run, voters cast a ballot, both signed in with a Hugging Face account. Since the first run.</p>
+  <div class="grid">
+    <div class="card"><h3>Players per week</h3><p class="sub">New: first run that week.</p><div class="plot"><canvas id="players"></canvas></div></div>
+    <div class="card"><h3>Voters per week</h3><p class="sub">New: first ballot that week.</p><div class="plot"><canvas id="voters"></canvas></div></div>
+    <div class="card"><h3>Runs published per week, by challenge</h3><p class="sub">Every run, withdrawn ones included.</p><div class="plot"><canvas id="runs"></canvas></div></div>
+    <div class="card"><h3>Community size</h3><p class="sub">Everyone who has ever published or voted, by day.</p><div class="plot"><canvas id="members"></canvas></div></div>
+  </div>
+</main>
+<script>
+const STATS = /*STATS*/null;
+const PERIODS = [["7", "7 days"], ["30", "30 days"], ["90", "90 days"], ["all", "Everything"]];
+const charts = [];
+let chosen = "30";
+
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = (n) => Number(n).toLocaleString("en-US", { maximumFractionDigits: 1 });
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const short = (day) => new Date(day + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+// A vertical hairline at the hovered date: readers aim at a date, not at a 2px line.
+const crosshair = {
+  id: "crosshair",
+  afterDatasetsDraw(chart) {
+    const active = chart.tooltip?.getActiveElements?.() ?? [];
+    if (!active.length) return;
+    const { ctx, chartArea } = chart;
+    ctx.save();
+    ctx.strokeStyle = css("--axis");
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(active[0].element.x, chartArea.top);
+    ctx.lineTo(active[0].element.x, chartArea.bottom);
+    ctx.stroke();
+    ctx.restore();
+  },
+};
+
+function table(rows, columns) {
+  const t = el("table");
+  const head = t.createTHead().insertRow();
+  columns.forEach(([, title]) => head.append(el("th", null, title)));
+  const body = t.createTBody();
+  rows.forEach((row) => {
+    const tr = body.insertRow();
+    columns.forEach(([key], i) => tr.append(el("td", null, i ? fmt(row[key]) : row[key])));
+  });
+  return t;
+}
+
+/** One chart, with its numbers as a table under it. `series` is [[label, values, colour var]]. */
+function plot(id, type, labels, series, { stacked = false, unit = "Day" } = {}) {
+  const canvas = document.getElementById(id);
+  const card = canvas.closest(".card");
+  card.querySelector("details")?.remove();
+  const surface = css("--surface");
+  const datasets = series.map(([label, data, colour], i) => {
+    const color = css(colour);
+    const top = !stacked || i === series.length - 1;
+    return type === "line"
+      ? { label, data, borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0,
+          pointHoverRadius: 4, pointHoverBorderWidth: 2, pointHoverBorderColor: surface, tension: 0 }
+      : { label, data, backgroundColor: color, maxBarThickness: 24, borderSkipped: "bottom",
+          borderRadius: top ? { topLeft: 4, topRight: 4 } : 0,
+          borderWidth: stacked ? { top: 2 } : 0, borderColor: surface };
+  });
+  charts.push(new Chart(canvas, {
+    type,
+    data: { labels: labels.map(short), datasets },
+    plugins: [crosshair],
+    options: {
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: series.length > 1, align: "start",
+                  labels: { color: css("--text-2"), boxWidth: 12, boxHeight: type === "line" ? 2 : 12 } },
+        tooltip: { backgroundColor: surface, titleColor: css("--text-2"), bodyColor: css("--text"),
+                   borderColor: css("--ring"), borderWidth: 1, boxHeight: 2, boxPadding: 4,
+                   callbacks: { label: (c) => ` ${fmt(c.parsed.y)}  ${c.dataset.label}` } },
+      },
+      scales: {
+        x: { stacked, grid: { display: false }, border: { color: css("--axis") },
+             ticks: { color: css("--muted"), maxRotation: 0, autoSkipPadding: 12 } },
+        y: { stacked, beginAtZero: true, grid: { color: css("--grid") }, border: { display: false },
+             ticks: { color: css("--muted"), precision: 0 } },
+      },
+    },
+  }));
+  const details = el("details");
+  details.append(el("summary", null, "Table"));
+  const rows = labels.map((label, r) => Object.fromEntries([["when", label], ...series.map(([name, data]) => [name, data[r] ?? 0])]));
+  const wrap = el("div", "wide");
+  wrap.append(table(rows, [["when", unit], ...series.map(([name]) => [name, name])]));
+  details.append(wrap);
+  card.append(details);
+}
+
+function tile(label, value, now, before, key, note) {
+  const t = el("div", "tile");
+  t.append(el("div", "label", label), el("div", "value", value));
+  const line = el("div", "note");
+  if (before && key) {
+    const was = before[key], is = now[key];
+    if (was > 0) {
+      const change = Math.round(((is - was) / was) * 100);
+      const delta = el("span", change >= 0 ? "delta-up" : "delta-down", `${change >= 0 ? "▲ +" : "▼ "}${change}%`);
+      line.append(delta, ` vs previous ${chosen} days`);
+    } else line.append(was === 0 && is > 0 ? `none the previous ${chosen} days` : "");
+  }
+  if (note) line.append(line.childNodes.length ? ` · ${note}` : note);
+  t.append(line);
+  return t;
+}
+
+function render() {
+  charts.splice(0).forEach((c) => c.destroy());
+  const period = STATS.periods[chosen];
+  const { now, before, start } = period;
+
+  const tiles = document.getElementById("tiles");
+  tiles.replaceChildren(
+    tile("Visitors", fmt(now.visitors), now, before, "visitors", `${fmt(now.new_visitors)} new`),
+    tile("Clicks to the store", fmt(now.buy_clicks), now, before, "buy_clicks",
+         `${fmt(now.buyers)} visitors, ${fmt(now.buy_rate * 100)}% of all`),
+    tile("Minutes per visit", fmt(now.minutes_per_visit), now, before, "minutes_per_visit",
+         `${fmt(now.pages_per_visit)} pages`),
+    tile("Players", fmt(now.players), now, before, "players", `${fmt(now.new_players)} new`),
+    tile("Runs published", fmt(now.runs), now, before, "runs"),
+    tile("Voters", fmt(now.voters), now, before, "voters", `${fmt(now.new_voters)} new · ${fmt(now.votes)} votes`),
+  );
+
+  const since = STATS.usage_since;
+  const usageStart = since && since > start ? since : start;
+  document.getElementById("audience-lede").textContent = since
+    ? `Counted by the Arena's own pages since ${short(since)}: no names, a random id per browser.`
+    : "The Arena's pages are not counting visits yet.";
+  const days = STATS.days.filter((d) => d.day >= usageStart);
+  const day = (key) => days.map((d) => d[key]);
+  const labels = days.map((d) => d.day);
+  plot("visitors", "bar", labels, [["Returning", days.map((d) => d.visitors - d.new_visitors), "--s1"], ["New", day("new_visitors"), "--s2"]], { stacked: true });
+  plot("buys", "bar", labels, [["Clicks", day("buy_clicks"), "--s1"]]);
+  plot("minutes", "line", labels, [["Minutes", day("minutes_per_visit"), "--s1"]]);
+  plot("pages", "line", labels, [["Pages", day("pages_per_visit"), "--s1"]]);
+
+  const show = (id, rows, columns) => {
+    const box = document.getElementById(id);
+    box.replaceChildren(rows.length ? table(rows, columns) : el("p", "empty", "Nothing over this period."));
+  };
+  show("t-pages", period.pages, [["label", "Page"], ["views", "Views"], ["visitors", "Visitors"]]);
+  show("t-outs", period.outs, [["label", "To"], ["clicks", "Clicks"], ["visitors", "Visitors"]]);
+  show("t-referrers", period.referrers, [["label", "From"], ["visits", "Visits"]]);
+  show("t-devices", period.devices, [["label", "On"], ["visits", "Visits"]]);
+
+  // A week is drawn when any of its days is in the period.
+  const weeks = STATS.weeks.filter((w) => w.week >= start || new Date(Date.parse(w.week) + 6 * 864e5).toISOString().slice(0, 10) >= start);
+  const wk = weeks.map((w) => w.week);
+  const weekly = { stacked: true, unit: "Week" };
+  plot("players", "bar", wk, [["Returning", weeks.map((w) => w.players - w.new_players), "--s1"], ["New", weeks.map((w) => w.new_players), "--s2"]], weekly);
+  plot("voters", "bar", wk, [["Returning", weeks.map((w) => w.voters - w.new_voters), "--s1"], ["New", weeks.map((w) => w.new_voters), "--s2"]], weekly);
+  plot("runs", "bar", wk, STATS.events.map((event, i) => [event, weeks.map((w) => w.runs[event] ?? 0), `--s${i + 1}`]), weekly);
+  const members = STATS.members.filter((m) => m.day >= start);
+  plot("members", "line", members.map((m) => m.day), [
+    ["Everyone", members.map((m) => m.members), "--s1"],
+    ["Players", members.map((m) => m.players), "--s2"],
+    ["Voters", members.map((m) => m.voters), "--s3"],
+  ]);
+}
+
+const filters = document.getElementById("filters");
+for (const [key, label] of PERIODS) {
+  const button = el("button", null, label);
+  button.type = "button";
+  button.addEventListener("click", () => {
+    chosen = key;
+    filters.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+    render();
+  });
+  button.setAttribute("aria-pressed", String(key === chosen));
+  filters.append(button);
+}
+document.getElementById("built").textContent = `Data as of ${STATS.built_at}, refreshed every 10 minutes when the page is opened.`;
+Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+render();
+</script>
+</body>
+</html>

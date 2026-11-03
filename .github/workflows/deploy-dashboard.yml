@@ -1,0 +1,29 @@
+# Every push to main that changes dashboard/ becomes Pollen's private usage dashboard.
+#
+# A Space of its own, private to the org, so the Arena's deploy leaves dashboard/ out
+# (scripts/deploy_space.py) and this one uploads nothing else.
+name: Deploy the dashboard
+
+on:
+  push:
+    branches: [main]
+    paths: [dashboard/**]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dashboard
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: pip install "huggingface_hub>=0.34"
+
+      - run: >
+          hf upload pollen-robotics/microduck-arena-dashboard dashboard .
+          --repo-type space --exclude "test_*" --delete "*"
+          --commit-message "Deploy ${GITHUB_SHA::7}"
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}

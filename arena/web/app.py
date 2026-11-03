@@ -26,6 +26,7 @@ from .routes_live import router as live_router
 from .routes_read import router as read_router
 from .routes_submit import router as submit_router
 from .routes_unfurl import router as unfurl_router
+from .routes_usage import router as usage_router
 from .routes_vote import BallotBook, Decks
 from .routes_vote import router as vote_router
 from .session import Sessions
@@ -42,6 +43,10 @@ def create_app(config: ArenaConfig) -> FastAPI:
     app.state.config = config
     app.state.store = config.build_store()
     app.state.ballots = config.build_ballots()
+    app.state.usage = config.build_usage()
+    app.on_event("startup")(app.state.usage.start)
+    # A restart writes the batch in hand first.
+    app.on_event("shutdown")(app.state.usage.stop)
     app.state.ballot_book = BallotBook()
     app.state.decks = Decks()
     app.state.sessions = Sessions()
@@ -215,6 +220,7 @@ def create_app(config: ArenaConfig) -> FastAPI:
     app.include_router(auth_router)
     app.include_router(vote_router)
     app.include_router(unfurl_router)
+    app.include_router(usage_router)
     app.include_router(live_router)
     app.include_router(launcher_router)
 

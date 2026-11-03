@@ -342,6 +342,7 @@ def _cmd_serve(args) -> int:
     print(f"clips  {on if clips.available else 'off (no Space, dataset or token to run jobs with)'}")
     booth = "on" if app.state.booth_off is None else f"off ({app.state.booth_off})"
     print(f"booth  {booth}")
+    print(f"usage  {config.usage_dataset if config.usage_dataset and config.hf_token else config.store_dir / 'usage'}")
     print(f"\n  http://{args.host}:{args.port}\n")
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
     return 0
