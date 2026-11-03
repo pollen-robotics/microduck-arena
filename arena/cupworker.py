@@ -33,7 +33,7 @@ from .cup import (
     parse_iso,
     round_name,
 )
-from .hub_fetch import fetch_policy
+from .hub_fetch import PolicyGone, fetch_policy
 from .index import copies
 from .live import SHUTTER_MS
 from .manifest import Manifest, all_events
@@ -48,6 +48,7 @@ ORDER_LEAD = timedelta(minutes=10)
 # lands a few seconds later.
 DRAW_GRACE = timedelta(seconds=60)
 # How long a policy may fail to load, from this process's first try at a cup's step, before the cup goes on without it.
+# One the Hub answers 404 for is not waited for.
 LOAD_PATIENCE = timedelta(minutes=10)
 # A match clip that failed is launched again this often, as long as it stays failed.
 CLIP_RETRY = timedelta(minutes=10)
@@ -237,21 +238,21 @@ class CupWorker:
               now: datetime) -> dict | None:
         """Each entrant's policy by run id, leaving out those that fail; None while one fails within LOAD_PATIENCE of
         this process's first try at the step, so a Hub away for a moment costs nobody their place, however long after
-        the close the process first looks (a deploy across it, a crash while the cup played)."""
+        the close the process first looks (a deploy across it, a crash while the cup played). A policy gone from the Hub
+        (PolicyGone) is not waited for."""
         first_try = self._tried.setdefault((manifest.id, number, step), now)
-        policies, missing = {}, []
+        policies, missing, gone = {}, [], []
         for entrant in entrants:
             try:
                 policies[entrant.run_id] = self.load(entrant)
             except Exception as exc:  # noqa: BLE001 — whatever stops a policy playing, it cannot play
-                missing.append(f"{entrant.user} ({type(exc).__name__}: {exc})")
-        if not missing:
-            return policies
-        if now < first_try + LOAD_PATIENCE:
+                (gone if isinstance(exc, PolicyGone) else missing).append(f"{entrant.user} ({type(exc).__name__}: {exc})")
+        if missing and now < first_try + LOAD_PATIENCE:
             self.log(f"cups: {manifest.id} #{number} waits for {', '.join(missing)}")
             return None
-        self.log(f"cups: {manifest.id} #{number} goes on without {', '.join(missing)}" if step == "draw" else
-                 f"cups: {manifest.id} #{number} plays {', '.join(missing)} standing still: drawn, they keep their place")
+        if failed := ", ".join(gone + missing):
+            self.log(f"cups: {manifest.id} #{number} goes on without {failed}" if step == "draw" else
+                     f"cups: {manifest.id} #{number} plays {failed} standing still: drawn, they keep their place")
         return policies
 
     def _draw(self, manifest: Manifest, number: int, now: datetime) -> tuple[Cup | None, dict | None]:

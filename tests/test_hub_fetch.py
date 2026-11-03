@@ -1,9 +1,17 @@
 import hashlib
 import json
+from types import SimpleNamespace
 
 import pytest
 
-from arena.hub_fetch import FetchError, check_manifest, fetch_policy, parse_repo_ref, rig_of
+from arena.hub_fetch import (
+    FetchError,
+    PolicyGone,
+    check_manifest,
+    fetch_policy,
+    parse_repo_ref,
+    rig_of,
+)
 from arena.manifest import load_event
 
 
@@ -108,6 +116,18 @@ def test_a_private_or_missing_repo_is_a_readable_refusal():
 
     with pytest.raises(FetchError, match="401"):
         fetch_policy("alice/walker", info=boom, download=lambda *a: "/tmp/x")
+
+
+@pytest.mark.parametrize("status,gone", [(404, True), (503, False)])
+def test_only_a_404_says_the_policy_is_gone(status, gone):
+    def answer(repo_id, revision):
+        error = RuntimeError(f"{status} Client Error")
+        error.response = SimpleNamespace(status_code=status)
+        raise error
+
+    with pytest.raises(FetchError) as refused:
+        fetch_policy("alice/walker", info=answer, download=lambda *a: "/tmp/x")
+    assert isinstance(refused.value, PolicyGone) is gone
 
 
 def test_a_declared_oversize_file_is_refused_without_downloading():

@@ -60,6 +60,11 @@ class FetchError(Exception):
     """The reference cannot be resolved, with a reason fit to show a human."""
 
 
+class PolicyGone(FetchError):
+    """The Hub answers 404: the repo or its commit is not there, private or deleted. Unlike a Hub away for a
+    moment, it will not be back in a few minutes."""
+
+
 @dataclass(frozen=True)
 class FetchedPolicy:
     repo_id: str
@@ -243,7 +248,8 @@ def _checked(repo_id: str, wanted: str | None, revision: str | None, event, down
     except FetchError:
         raise
     except Exception as exc:
-        raise FetchError(f"could not read {repo_id}: {exc}") from exc
+        gone = getattr(getattr(exc, "response", None), "status_code", None) == 404
+        raise (PolicyGone if gone else FetchError)(f"could not read {repo_id}: {exc}") from exc
     # Every file is read at the commit the listing came from, so the manifest
     # checked and the weights raced are one publication, not two.
     pinned = sha or revision or "main"

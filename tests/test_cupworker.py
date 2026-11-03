@@ -33,7 +33,7 @@ from arena.cupworker import (
     load_entrant,
     running_order,
 )
-from arena.hub_fetch import FetchError
+from arena.hub_fetch import FetchError, PolicyGone
 from arena.manifest import BoutRules, load_event
 from arena.match import BoutResult, MatchOutcome, bout_seed
 from arena.policy import load_policy
@@ -230,10 +230,19 @@ def worker(store, clock, clips=None, load=lambda e: e.user, show=None, log=lambd
 
 
 def gone(user):
-    """A load for which `user`'s policy no longer exists."""
+    """A load for which the Hub answers 404 for `user`'s policy: private or deleted."""
     def load(entrant):
         if entrant.user == user:
-            raise FetchError(f"could not read {user}/tug: 404")
+            raise PolicyGone(f"could not read {user}/tug: 404")
+        return entrant.user
+    return load
+
+
+def down(user):
+    """A load for which `user`'s policy keeps failing, as on a Hub away for longer than a moment."""
+    def load(entrant):
+        if entrant.user == user:
+            raise FetchError(f"could not read {user}/tug: 503")
         return entrant.user
     return load
 
@@ -676,22 +685,40 @@ def test_a_withdrawal_after_close_changes_nothing(tmp_path, no_physics):
     assert [e.user for e in load_cup(store, "tug-of-war", 1).entrants] == ["p0", "p1", "p2", "p3", "p5"]
 
 
-def test_an_entrant_whose_policy_no_longer_loads_is_left_out_after_ten_minutes(tmp_path, no_physics):
+def test_an_entrant_whose_policy_will_not_load_is_left_out_after_ten_minutes(tmp_path, no_physics):
     store, clock, said = LocalStore(tmp_path), Clock(T1), []  # the draw's first moment, a minute past the close
     enter(store, 6)
-    cups = CupWorker(store, FakeClips(), events=[EARLY], load=gone("p2"), now=clock, log=said.append)
+    cups = CupWorker(store, FakeClips(), events=[EARLY], load=down("p2"), now=clock, log=said.append)
     cups.tick()
     assert load_cup(store, "tug-of-war", 1) is None
-    assert any("waits for p2 (FetchError: could not read p2/tug: 404)" in line for line in said)
+    assert any("waits for p2 (FetchError: could not read p2/tug: 503)" in line for line in said)
     clock.at = T1 + LOAD_PATIENCE
     cups.tick()
     assert [e.user for e in load_cup(store, "tug-of-war", 1).entrants] == ["p0", "p1", "p3", "p4", "p5"]
     assert any("without p2" in line for line in said)
 
 
-def test_a_drawn_duck_whose_policy_no_longer_loads_stands_still_after_ten_minutes(tmp_path, no_physics, monkeypatch):
-    """The draw landed, the Space restarted before the matches, and p2's repo is gone since: the draw is frozen, so
-    p2 keeps its place and its matches are played by a duck holding its standing pose, rather than the cup held forever."""
+def test_an_entrant_whose_policy_is_gone_from_the_hub_is_left_out_at_once(tmp_path, no_physics):
+    store, said = LocalStore(tmp_path), []
+    enter(store, 6)
+    CupWorker(store, FakeClips(), events=[EARLY], load=gone("p2"), now=Clock(T1), log=said.append).tick()
+    assert [e.user for e in load_cup(store, "tug-of-war", 1).entrants] == ["p0", "p1", "p3", "p4", "p5"]
+    assert any("without p2 (PolicyGone: could not read p2/tug: 404)" in line for line in said)
+
+
+def test_a_drawn_duck_whose_policy_is_gone_from_the_hub_stands_still_at_once(tmp_path, no_physics):
+    store = LocalStore(tmp_path)
+    enter(store, 6)
+    worker(Crashing(store, 2), Clock(T1)).tick()  # the draw lands, the matches do not
+    worker(store, Clock(T1), load=gone("p2")).tick()
+    assert [e.user for e in load_cup(store, "tug-of-war", 1).entrants] == ["p0", "p1", "p2", "p3", "p4", "p5"]
+    assert len(load_cup(store, "tug-of-war", 1).matches) == 9
+
+
+def test_a_drawn_duck_whose_policy_will_not_load_stands_still_after_ten_minutes(tmp_path, no_physics, monkeypatch):
+    """The draw landed, the Space restarted before the matches, and p2's policy has not loaded since: the draw is
+    frozen, so p2 keeps its place and its matches are played by a duck holding its standing pose, rather than the cup
+    held forever."""
     store = LocalStore(tmp_path)
     enter(store, 6)
     worker(Crashing(store, 2), Clock(T1)).tick()
@@ -700,7 +727,7 @@ def test_a_drawn_duck_whose_policy_no_longer_loads_stands_still_after_ten_minute
     monkeypatch.setattr(cupworker, "play_match", lambda m, a, b, seeds, ratings, model=None:
                         played.append((a, b)) or fake_play(m, a, b, seeds, ratings))
     clock, said = Clock(T1), []
-    restarted = CupWorker(store, FakeClips(), events=[EARLY], load=gone("p2"), now=clock, log=said.append)
+    restarted = CupWorker(store, FakeClips(), events=[EARLY], load=down("p2"), now=clock, log=said.append)
     restarted.tick()
     assert load_cup(store, "tug-of-war", 1).matches == () and played == []
     clock.at = T1 + LOAD_PATIENCE - timedelta(seconds=1)
@@ -708,7 +735,7 @@ def test_a_drawn_duck_whose_policy_no_longer_loads_stands_still_after_ten_minute
     assert load_cup(store, "tug-of-war", 1).matches == () and played == []
     clock.at = T1 + LOAD_PATIENCE
     restarted.tick()
-    assert any("p2 (FetchError: could not read p2/tug: 404)" in line and "standing still" in line for line in said)
+    assert any("p2 (FetchError: could not read p2/tug: 503)" in line and "standing still" in line for line in said)
     cup = load_cup(store, "tug-of-war", 1)
     assert [e.user for e in cup.entrants] == ["p0", "p1", "p2", "p3", "p4", "p5"] and len(cup.matches) == 9
     duck = lambda i: "standing" if cup.entrants[i].user == "p2" else cup.entrants[i].user
