@@ -21,6 +21,8 @@ OUTS = {
     "github.com": "GitHub",
     "huggingface.co": "Hugging Face",
 }
+# A visit the Arena's own address refers is a sign-in coming back or a tab it opened, not an arrival.
+ARENA_HOST = "pollen-robotics-microduck-arena.hf.space"
 
 
 def load(runs_root: Path, usage_root: Path) -> tuple[list[dict], list[dict], list[dict]]:
@@ -144,7 +146,8 @@ def tables(hits: list[dict]) -> dict:
         "pages": [{"label": k, "views": n, "visitors": len(v)}
                   for k, (n, v) in sorted(pages.items(), key=lambda kv: -kv[1][0])],
         "referrers": [{"label": k, "visits": n} for k, n in Counter(
-            h.get("referrer") or "(none)" for h in openings).most_common(12)],
+            h.get("referrer") or "(none)" for h in openings
+            if h.get("referrer") != ARENA_HOST).most_common(12)],
         "devices": [{"label": label, "visits": n} for label, n in Counter(
             ("Phone or tablet" if h.get("mobile") else "Computer")
             + (", on huggingface.co" if h.get("embedded") else ", on its own address")

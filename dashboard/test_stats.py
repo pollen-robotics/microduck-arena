@@ -64,6 +64,15 @@ def test_only_the_store_counts_as_a_buy_click():
         "Store (buy)": 2, "Discord": 1}
 
 
+def test_a_visit_the_arena_sent_itself_is_not_an_arrival():
+    opening = {"embedded": False, "mobile": False}
+    hits = [view("2026-11-03", "ann", "a1", referrer="huggingface.co", **opening),
+            view("2026-11-03", "ann", "a2", referrer="pollen-robotics-microduck-arena.hf.space", **opening),
+            view("2026-11-03", "bob", "b1", **opening)]
+    referrers = build(hits, [], [], TODAY)["periods"]["7"]["referrers"]
+    assert {row["label"]: row["visits"] for row in referrers} == {"huggingface.co": 1, "(none)": 1}
+
+
 def test_players_are_counted_per_week_new_or_returning():
     runs = [run("2026-10-20", "ann"), run("2026-10-27", "ann"), run("2026-10-28", "ann"),
             run("2026-10-29", "bob")]
