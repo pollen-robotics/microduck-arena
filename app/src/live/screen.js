@@ -1,8 +1,9 @@
 // The cup screen on the booth's back wall during the cup's show: the groups
 // and their tables while the groups play, then the bracket, the next match
-// picked out in yellow, every duck by its on-air name. The layout is a list of
-// paint operations in design tokens; drawCupScreen paints them on a canvas.
-// The layout measures no text: a character counts CHAR of its size.
+// picked out in yellow, every duck billed with its player, "<policy> (@<user>)".
+// The layout is a list of paint operations in design tokens; drawCupScreen
+// paints them on a canvas. The layout measures no text: a character counts
+// CHAR of its size.
 
 import { token } from "./set.js";
 
@@ -19,11 +20,20 @@ const PAD = 12; // a panel's padding, top and bottom together
 const GAP = 8; // between panels
 const FOOTER = 32; // the footer's type
 const STROKE = 4;
+const KEPT = 8; // the fewest characters of a policy's name worth showing, its ellipsis one of them
 
-/** A name cut with an ellipsis to the room it is given. */
+const ellipsis = (text, chars) => `${text.slice(0, chars - 1).trimEnd()}…`;
+
+/** A name cut with an ellipsis to the room it is given. A billed duck is cut
+ * in its policy's name and keeps its player's handle whole, or is its handle
+ * alone, cut in turn, when the policy would keep less than KEPT. */
 function cut(name, room, size) {
   const chars = Math.floor(room / (CHAR * size));
-  return name.length <= chars ? name : `${name.slice(0, chars - 1).trimEnd()}…`;
+  if (name.length <= chars) return name;
+  const [, policy, handle] = name.match(/^(.+) \((@[^\s()]+)\)$/) ?? [];
+  if (!handle) return ellipsis(name, chars);
+  const left = chars - ` (${handle})`.length;
+  return left < KEPT ? cut(handle, room, size) : `${ellipsis(policy, left)} (${handle})`;
 }
 
 export function screenLayout(view, width, height) {

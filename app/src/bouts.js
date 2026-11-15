@@ -23,7 +23,7 @@ export function boutLane(match, k, traces, settles, string) {
   return { tug: "bout", ducks: [west, east].map((duck, side) => ({ trace: traces[side], settle: settles[side], ...duck })), string };
 }
 
-/** Who won a match, by its on-air name: by rating when its bouts tied. */
-export function winLine(match) {
-  return `${match[match.winner].name} wins${match.decided_by === "rating" ? " on rating" : ""}`;
+/** Who won a match, by its on-air name or the `name` given: by rating when its bouts tied. */
+export function winLine(match, name = match[match.winner].name) {
+  return `${name} wins${match.decided_by === "rating" ? " on rating" : ""}`;
 }

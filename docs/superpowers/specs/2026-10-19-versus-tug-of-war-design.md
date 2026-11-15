@@ -608,6 +608,10 @@ relock as usual, then the owner publishes the first candidate.
 - 2026-10-27, after the pre-release review: a time limit on the policies before the release (a
   policy that fails or thinks too long faults); a MuJoCo reset is the entry's fault in a rating;
   clip jobs 16 at once; the booth waited for 30 minutes past the premiere at most.
+- 2026-11-14, after @jrubiosainz's issue #8: on air a duck is billed with its player,
+  "<policy name> (@<user>)", wherever its match is announced (its title, so its clip's card), on its
+  clip's stamp and on the desk's cup screen; the score bug, the plates over the ducks and the call
+  lines keep its policy's name.
 
 ## My calls (the owner may object)
 
@@ -615,7 +619,8 @@ relock as usual, then the owner publishes the first candidate.
   limit is the owner's).
 - A match's result is revealed when its clip has finished airing (its clip may load 30 s before it
   starts); the knockout bracket keeps group-mates apart until the final; on air, ducks are named by
-  their policy names (with the player's handle when two entrants of a cup share one).
+  their policy names (with the player's handle when two entrants of a cup share one) on the score
+  bug, their plates and in the calls, and billed with their players elsewhere (2026-11-14).
 - Matches first to two bouts, sides swapped; seeds from cup/match/bout.
 - Legs only; a fixed command; no sweep.
 - Friday 18:00 Europe/Paris premiere, 16:00 close; no cup under 4 entrants.

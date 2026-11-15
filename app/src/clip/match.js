@@ -3,6 +3,7 @@
 // travelAt read this plan as they read a run's.
 
 import { winLine } from "../bouts.js";
+import { capitalised } from "../format.js";
 import { CTRL_DT } from "../replay.js";
 import { FPS, INTRO_S, OUTRO_S, STRIDE, TRAVEL_S } from "./plan.js";
 
@@ -64,13 +65,19 @@ export function scoreAt(plan, match, i) {
   return ["a", "b"].map((side) => winners.filter((winner) => winner === side).length);
 }
 
-/** The words on a match's clip: the cup, who meets whom, and who won by how much, or, on a tie, by
- * the higher rating. */
+/** The words on a match's clip: the cup, who meets whom, the players while the score bug names their
+ * policies, and who won by how much, or, on a tie, by the higher rating, the winner by its policy's
+ * name over its player's handle. */
 export function matchWords(match) {
   const [won, lost] = match.winner === "a" ? match.wins : [...match.wins].reverse();
+  const stage = match.round === "group" ? `Group ${match.group}` : capitalised(match.round);
+  const winner = match[match.winner];
+  const outro = winLine(match, winner.policy_name);
   return {
     title: `${match.event.title} · Cup #${match.cup}`,
     line: match.title,
-    outro: match.decided_by === "rating" ? winLine(match) : `${winLine(match)} ${won}–${lost}`,
+    players: `${stage} · @${match.a.user} vs @${match.b.user}`,
+    outro: match.decided_by === "rating" ? outro : `${outro} ${won}–${lost}`,
+    by: `@${winner.user}`,
   };
 }

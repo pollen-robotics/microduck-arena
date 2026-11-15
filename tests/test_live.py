@@ -465,7 +465,7 @@ def test_an_aired_cup_joins_the_pool_until_the_next_cup_starts(tmp_path):
     store_cup(store, cup)
     assert pool(store, ends_at(cup) - timedelta(seconds=1)) == []
     entries = pool(store, ends_at(cup))
-    assert len(entries) == 7 and entries[-1].title == f"{TITLE} · Cup #1 · Final · duck 0 vs duck 1"
+    assert len(entries) == 7 and entries[-1].title == f"{TITLE} · Cup #1 · Final · duck 0 (@p0) vs duck 1 (@p1)"
     assert (entries[-1].submitted_at, entries[-1].replay_ms, entries[-1].clip) == (iso(REVEAL(6)), 10000, "20261030T152000Z")
     store_cup(store, played_cup(4, number=2, starts_at="2026-11-06T17:00:00Z"))
     assert len(pool(store, datetime(2026, 11, 6, 16, 59, tzinfo=UTC))) == 7

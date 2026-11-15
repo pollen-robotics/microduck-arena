@@ -48,7 +48,7 @@ export function createShutter(container) {
       const announce = destination && next;
       card.hidden = !announce;
       if (announce) {
-        // A cup match is announced by its title alone, never by a player.
+        // A cup match is announced by its title alone, which bills both its players, never by one of them.
         const match = Boolean(next.title);
         event.textContent = match ? next.title : next.event;
         user.hidden = match;

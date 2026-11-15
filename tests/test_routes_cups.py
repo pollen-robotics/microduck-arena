@@ -71,7 +71,7 @@ def test_a_match_and_everything_of_it_is_a_404_until_its_reveal(client, monkeypa
     assert api.get(f"/api/matches/{mid}/clip").status_code == 404
     body = api.get(paths[0]).json()
     assert (body["a"]["user"], body["b"]["user"], body["winner"], body["wins"], body["round"], body["group"]) == ("p0", "p3", "a", [2, 0], "group", "A")
-    assert (body["title"], body["clip"]) == ("Group A · duck 0 vs duck 3", "20261030T152000Z")
+    assert (body["title"], body["clip"]) == ("Group A · duck 0 (@p0) vs duck 3 (@p3)", "20261030T152000Z")
     trace = api.get(paths[1])
     assert (trace.headers["x-duck-count"], trace.headers["x-frame-count"]) == ("2", "2")
     string = api.get(paths[4])

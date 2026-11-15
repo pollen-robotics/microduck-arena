@@ -22,6 +22,12 @@ html, body { margin: 0; background: var(--deep-ink); color: var(--paper); font-f
 /* The stamp lands at the outro on the author's duck itself, centred where the
    page puts it (main.js), over the last thing the duck did. */
 .screen .stamp { position: absolute; z-index: 4; translate: -50% -50%; white-space: nowrap; }
+/* Under a match's winner, its player's handle, in the OSD's letters: a handle keeps its case. */
+.stamp-by {
+  display: block; margin-top: 0.12em; text-align: center; text-transform: none;
+  font: var(--type-mono-label-weight) 0.3em / 1.2 var(--type-mono-label-family);
+  letter-spacing: var(--type-mono-label-tracking);
+}
 
 /* The bands: the marquee above, the figures below. Vertical has room for both
    for the whole tape; landscape shows the figures only at the outro. */

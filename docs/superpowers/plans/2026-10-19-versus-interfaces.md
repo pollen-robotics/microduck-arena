@@ -47,11 +47,13 @@ here. If a plan must change a name, it changes this file in the same commit.
   `Nico-robot/microduck-tug-of-war` unless the owner names another at publish time; cup #1's Friday
   is set at release (D's release step asks); about 150 LLM router calls per cup are acceptable; on
   air a duck is named by its on-air `name` (Plan C's `Entrant.name`: the policy's name, plus
-  ` (@<user>)` when another entrant of the cup has the same policy name) (match titles, clip cards,
-  the match page's stamp, the cup screen, the desk and the call lines), the cup page shows the
-  policy's name and the player's handle; the run page's stamp `RATED`, the lime round card with
-  `Pull!`; 45 s bouts, a rating of five bouts against a frozen reference duck in cm with a pit
-  bonus, no winch (2026-10-20 night).
+  ` (@<user>)` when another entrant of the cup has the same policy name) on the score bug, the match
+  page's stamp, the bout plates and in the call lines, and billed `"<policy name> (@<user>)"`
+  (`cup.duck`) in match titles (so the clip cards), on the cup screen and at the desk, a match clip's
+  stamp putting the handle under the policy's name and its REC line naming the players (amended
+  2026-11-14, issue #8); the cup page shows the policy's name and the player's handle; the run
+  page's stamp `RATED`, the lime round card with `Pull!`; 45 s bouts, a rating of five bouts against
+  a frozen reference duck in cm with a pit bonus, no winch (2026-10-20 night).
 - **Worktree (arena):** `~/Projects/HuggingFace/microduck-arena/.claude/worktrees/versus`, branch
   `versus` from local `main` at `abcbb9e` or later. From the main checkout:
   - `/usr/bin/git worktree add .claude/worktrees/versus -b versus main`
@@ -490,7 +492,8 @@ def airs_at(cup: Cup, match_id: str) -> datetime | None      # starts_at + its m
 def revealed_at(cup: Cup, match_id: str) -> datetime | None  # airs_at + its duration_ms: its clip has finished airing
 PREFETCH = timedelta(seconds=30)   # a match's clip and its call are served from airs_at - PREFETCH;
                                    # a desk segment from revealed_at(its `after` match) - PREFETCH
-# Plan C's other names: iso, parse_iso, parse_match_id, match_title (stage · A's name vs B's),
+# Plan C's other names: iso, parse_iso, parse_match_id, duck(entrant) ("<policy name> (@<user>)"),
+# match_title (stage · A billed vs B billed),
 # match_label (the stage alone, no duck: "Group C", "Quarter-final 2", "Final"), reached, ends_at,
 # cup_state(cup, now) -> str, GROUP_NAMES; Entrant.view/to_dict/from_dict; Cup.draw_json,
 # Cup.matches_json, Cup.from_json
@@ -604,7 +607,8 @@ export function matchClipUrl(matchId, name, version)
 export function boutLane(match, k, traces, settles, string)   // {tug: "bout", ducks: [west, east], string: {trace, settle?}}, each duck {trace, settle, livery, name} (the entrant's on-air name), a/b placed by bouts[k].a_side
 // app/src/replay.js (Plan G Task 6): leadIn gains a `width` parameter (TRACE_WIDTH for the ducks, STRING_WIDTH for the string)
 // app/src/cast.js: replayLane(event, cast, traces, lane, string)
-// app/src/clip/match.js: matchPlan(bouts), boutAt(plan, i), scoreAt(plan, match, i), matchWords(match);
+// app/src/clip/match.js: matchPlan(bouts), boutAt(plan, i), scoreAt(plan, match, i), matchWords(match)
+//   ({title, line, players, outro, by}: the REC line's players by handle, the winner by its policy's name over `by`);
 //   BOUT_HOLD_S = 6: each bout's last pose holds this long, its result on the bug, before the next bout or the outro
 // app/src/format.js: countdown(ms); app/src/cup.js: cupPage, renderCup, cupCorner(eventId, cups, nowMs)
 // app/src/live/standby.js: createStandby(stage)
@@ -641,7 +645,7 @@ def cup_facts(cup: Cup, before: int, history: Sequence[Cup], manifest: Manifest)
 def screen_view(cup: Cup, before: int, manifest: Manifest) -> dict    # the desk screen's view, stored as a desk segment's `screen`
 #   {"title", "stage", "groups": [{"name", "rows": [{"name", "won", "played"}]}],
 #    "knockout": [{"round", "matches": [{"a": name | None, "b": name | None, "winner": "a" | "b" | None, "next": bool}]}],
-#    "next": {"a", "b", "group", "round"} | None, "champion": name | None}      (ducks by their on-air `name`)
+#    "next": {"a", "b", "group", "round"} | None, "champion": name | None}      (ducks billed: `duck(entrant)`)
 # arena/commentary/show.py — new
 def show_outline(cup: Cup) -> list[dict]
 #   [{"id": "opening", "kind": "opening", "after": -1},
@@ -692,7 +696,7 @@ export function clipGain(plan, offsetMs)      // DUCKED inside a caption of the 
 // app/src/live/replay.js: volume(gain) sets every clip's volume
 // app/src/live.js: segments { replay: call, booth: interlude, desk: interlude, standby }
 // app/src/live/screen.js — new
-export function drawCupScreen(canvas, view)   // groups, then the bracket, next match highlighted, ducks by their on-air name
+export function drawCupScreen(canvas, view)   // groups, then the bracket, next match highlighted, ducks billed, a cut keeping the handle
 // app/src/live/set.js: booth({ screen }) stands the cup screen (the canvas as a texture) ready, hidden, at the
 //   pegboard's place; standScreen(set, shown) stands it in place of the pegboard, or the pegboard back
 // app/src/live/booth.js: one booth on the live page (Ruling F): createBooth(canvas) owns a SCREEN_PX canvas;

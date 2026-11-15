@@ -19,9 +19,10 @@ describe("boutLane", () => {
 });
 
 describe("winLine", () => {
-  it("names the winner by its on-air name, and by rating when the bouts tied", () => {
+  it("names the winner by its on-air name or the name given, and by rating when the bouts tied", () => {
     const match = { a: { name: "Tank" }, b: { name: "Lean" }, winner: "b", decided_by: "bouts" };
     expect(winLine(match)).toBe("Lean wins");
     expect(winLine({ ...match, decided_by: "rating" })).toBe("Lean wins on rating");
+    expect(winLine({ ...match, decided_by: "rating" }, "Lean policy")).toBe("Lean policy wins on rating");
   });
 });

@@ -128,10 +128,13 @@ def test_a_cup_is_named_on_air_by_its_event_and_number():
     assert cup_title("Tug of War", 12) == "Tug of War · Cup #12"
 
 
-def test_a_title_says_the_stage_and_both_ducks():
+def test_a_title_says_the_stage_and_both_ducks_with_their_players():
     cup = Cup("tug-of-war", 1, "", "", "", tuple(entrant(i) for i in range(4)), ((0, 1, 2, 3),))
-    assert match_title(cup, won(0, 3, (2, 0))) == "Group A · duck 0 vs duck 3"
-    assert match_title(cup, replace(won(0, 1, (2, 1)), round="semi-final", group=None)) == "Semi-final · duck 0 vs duck 1"
+    assert match_title(cup, won(0, 3, (2, 0))) == "Group A · duck 0 (@p0) vs duck 3 (@p3)"
+    assert (match_title(cup, replace(won(0, 1, (2, 1)), round="semi-final", group=None))
+            == "Semi-final · duck 0 (@p0) vs duck 1 (@p1)")
+    clash = replace(cup, entrants=(replace(entrant(0), name="duck 0 (@p0)"),) + cup.entrants[1:])
+    assert match_title(clash, won(0, 3, (2, 0))) == "Group A · duck 0 (@p0) vs duck 3 (@p3)"   # the handle once
 
 
 def test_reached_is_how_far_each_entrant_went():
