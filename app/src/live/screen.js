@@ -1,6 +1,7 @@
 // The cup screen on the booth's back wall during the cup's show: the groups
 // and their tables while the groups play, then the bracket, the next match
-// picked out in yellow, every duck billed with its player, "<policy> (@<user>)".
+// picked out in yellow: the group tables by the players' handles, the bracket
+// and the footer every duck billed with its player, "<policy> (@<user>)".
 // The layout is a list of paint operations in design tokens; drawCupScreen
 // paints them on a canvas. The layout measures no text: a character counts
 // CHAR of its size.

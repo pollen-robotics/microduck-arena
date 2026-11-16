@@ -450,12 +450,13 @@ TITLE = load_event("tug-of-war").title
 
 
 def test_a_match_entry_is_announced_by_its_title_and_plays_its_match_clip_with_no_booth(tmp_path):
-    match = Entry("tug-of-war-0001-008", "p0", TITLE, "2026-10-30T17:01:34Z", 10000, "v1", title="Final · x vs y")
+    match = Entry("tug-of-war-0001-008", "p0", TITLE, "2026-10-30T17:01:34Z", 10000, "v1", title="Cup #1 · Final",
+                  billing="x (@p0) vs y (@p1)")
     book = BroadcastBook(tmp_path)
     book.put(match.run_id, {"run_id": match.run_id, "turns": [], "lore_refs": []},
              {"duration_ms": 20000, "captions": [], "notes": [], "gestures": []}, "2026-10-30T18:00:00Z")
     shutter, replay = slots_for([match], 1_000_000, book)
-    assert shutter["next"] == {"match_id": "tug-of-war-0001-008", "title": "Final · x vs y"}
+    assert shutter["next"] == {"match_id": "tug-of-war-0001-008", "title": "Cup #1 · Final", "billing": "x (@p0) vs y (@p1)"}
     assert replay == {"kind": "replay", "at_ms": 1_001_600, "duration_ms": 10000, "run_id": "tug-of-war-0001-008",
                       "clip": "v1", "media": "match"}
 
@@ -465,7 +466,9 @@ def test_an_aired_cup_joins_the_pool_until_the_next_cup_starts(tmp_path):
     store_cup(store, cup)
     assert pool(store, ends_at(cup) - timedelta(seconds=1)) == []
     entries = pool(store, ends_at(cup))
-    assert len(entries) == 7 and entries[-1].title == f"{TITLE} · Cup #1 · Final · duck 0 (@p0) vs duck 1 (@p1)"
+    assert len(entries) == 7 and entries[-1].title == f"{TITLE} · Cup #1 · Final"
+    assert entries[-1].billing == "duck 0 (@p0) vs duck 1 (@p1)"
+    assert entries[0].title == f"{TITLE} · Cup #1 · Group A"
     assert (entries[-1].submitted_at, entries[-1].replay_ms, entries[-1].clip) == (iso(REVEAL(6)), 10000, "20261030T152000Z")
     store_cup(store, played_cup(4, number=2, starts_at="2026-11-06T17:00:00Z"))
     assert len(pool(store, datetime(2026, 11, 6, 16, 59, tzinfo=UTC))) == 7

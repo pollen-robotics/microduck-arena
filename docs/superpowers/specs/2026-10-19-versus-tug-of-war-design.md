@@ -609,9 +609,10 @@ relock as usual, then the owner publishes the first candidate.
   policy that fails or thinks too long faults); a MuJoCo reset is the entry's fault in a rating;
   clip jobs 16 at once; the booth waited for 30 minutes past the premiere at most.
 - 2026-11-14, after @jrubiosainz's issue #8: on air a duck is billed with its player,
-  "<policy name> (@<user>)", wherever its match is announced (its title, so its clip's card), on its
-  clip's stamp and on the desk's cup screen; the score bug, the plates over the ducks and the call
-  lines keep its policy's name.
+  "<policy name> (@<user>)", wherever its match is announced (its title, so its clip's card, and
+  under its title on a replay's UP NEXT card), on its clip's stamp and on the desk's cup screen,
+  whose group tables name the players by handle alone; the score bug, the plates over the ducks
+  and the call lines keep its policy's name.
 
 ## My calls (the owner may object)
 

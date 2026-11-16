@@ -208,9 +208,14 @@ def duck(entrant: Entrant) -> str:
     return f"{entrant.policy_name} (@{entrant.user})"
 
 
+def match_billing(cup: Cup, match: MatchRecord) -> str:
+    """Who meets whom, both ducks billed with their players."""
+    return f"{duck(cup.entrants[match.a])} vs {duck(cup.entrants[match.b])}"
+
+
 def match_title(cup: Cup, match: MatchRecord) -> str:
-    """The match as it is announced on air, both ducks billed with their players."""
-    return f"{_stage(match)} · {duck(cup.entrants[match.a])} vs {duck(cup.entrants[match.b])}"
+    """The match as it is announced on air: its stage and its billing."""
+    return f"{_stage(match)} · {match_billing(cup, match)}"
 
 
 def match_label(cup: Cup, match: MatchRecord) -> str:

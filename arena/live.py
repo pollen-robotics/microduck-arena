@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from .broadcasts import BroadcastBook, utcnow
-from .cup import cup_title, ends_at, iso, match_title, parse_iso, revealed_at
+from .cup import cup_title, ends_at, iso, match_billing, match_label, parse_iso, revealed_at
 from .index import copies
 from .manifest import all_events
 from .store import clip_version
@@ -43,8 +43,10 @@ class Entry:
     replay_ms: int
     # Which render of the clip: the screens build its media URLs from this.
     clip: str
-    # A cup match's, which announces it: "Tug of War · Cup #1 · Final · duck 0 vs duck 1".
+    # A cup match's, which announces it: "Tug of War · Cup #1 · Final", over its billing,
+    # "duck 0 (@p0) vs duck 1 (@p1)".
     title: str | None = None
+    billing: str | None = None
 
 
 @dataclass(frozen=True)
@@ -101,7 +103,8 @@ def pool(store, now: datetime) -> list[Entry]:
             if ready is not None:
                 entries.append(Entry(match.match_id, cup.entrants[match.winner].user, manifest.title,
                                      iso(revealed_at(cup, match.match_id)), *ready,
-                                     title=f"{cup_title(manifest.title, cup.number)} · {match_title(cup, match)}"))
+                                     title=f"{cup_title(manifest.title, cup.number)} · {match_label(cup, match)}",
+                                     billing=match_billing(cup, match)))
     return entries
 
 
@@ -175,7 +178,7 @@ def slots_for(entries: list[Entry], start_ms: int, book: BroadcastBook,
     for entry in entries:
         match = entry.title is not None
         add({"kind": "shutter", "duration_ms": SHUTTER_MS,
-             "next": {"match_id": entry.run_id, "title": entry.title} if match
+             "next": {"match_id": entry.run_id, "title": entry.title, "billing": entry.billing} if match
              else {"run_id": entry.run_id, "event": entry.event_title, "user": entry.user}})
         add({"kind": "replay", "duration_ms": entry.replay_ms, "run_id": entry.run_id,
              "clip": entry.clip, **({"media": "match"} if match else {})})

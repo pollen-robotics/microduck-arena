@@ -22,10 +22,11 @@ html, body { margin: 0; background: var(--deep-ink); color: var(--paper); font-f
 /* The stamp lands at the outro on the author's duck itself, centred where the
    page puts it (main.js), over the last thing the duck did. */
 .screen .stamp { position: absolute; z-index: 4; translate: -50% -50%; white-space: nowrap; }
-/* Under a match's winner, its player's handle, in the OSD's letters: a handle keeps its case. */
+/* Under a match's winner, its player's handle on an ink tag, as the plates over the ducks: the floor
+   and the rope pass under the stamp, never under the handle. A handle keeps its case. */
 .stamp-by {
-  display: block; margin-top: 0.12em; text-align: center; text-transform: none;
-  font: var(--type-mono-label-weight) 0.3em / 1.2 var(--type-mono-label-family);
+  display: table; margin: 0.12em auto 0.06em; padding: 0.1em 0.5em; background: var(--ink);
+  text-transform: none; font: 700 0.36em / 1.2 var(--type-mono-label-family);
   letter-spacing: var(--type-mono-label-tracking);
 }
 

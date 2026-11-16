@@ -136,7 +136,10 @@
 .live-shutter::before { top: 0; }
 .live-shutter::after { bottom: 0; background-position: calc(48 * var(--u)) 0; }
 .live-shutter .wordmark { font-size: calc(140 * var(--u)); line-height: 0.9; text-align: center; }
-.live-upnext { display: grid; justify-items: center; gap: calc(8 * var(--u)); color: var(--ink); }
+.live-upnext {
+  display: grid; justify-items: center; gap: calc(8 * var(--u)); color: var(--ink);
+  padding-inline: calc(64 * var(--u)); text-align: center;
+}
 .live-upnext .eyebrow { font-size: calc(22 * var(--u)); }
 .live-upnext-event { font: 400 calc(64 * var(--u)) / 1 var(--display); text-transform: uppercase; }
 .live-upnext-user { font-size: calc(28 * var(--u)); color: var(--sky-inked); }

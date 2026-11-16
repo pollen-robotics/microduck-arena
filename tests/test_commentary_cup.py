@@ -85,7 +85,7 @@ def test_a_group_table_counts_only_what_has_aired():
     assert view["title"] == "Tug of War · Cup #1" and view["stage"] == "Groups · round 2 of 3"
     group_a = view["groups"][0]
     assert sum(row["played"] for row in group_a["rows"]) == 2
-    assert sorted(row["name"] for row in group_a["rows"]) == ["puller 0 (@p0)", "puller 2 (@p2)", "puller 4 (@p4)"]
+    assert sorted(row["name"] for row in group_a["rows"]) == ["@p0", "@p2", "@p4"]
     assert all(side is None for round_ in view["knockout"] for m in round_["matches"] for side in (m["a"], m["b"]))
     assert view["next"]["group"] == "A"
     assert ("Group A after 1 match: puller 2 (@p2) 1 win, puller 0 (@p0) 0 wins, puller 4 (@p4) 0 wins."

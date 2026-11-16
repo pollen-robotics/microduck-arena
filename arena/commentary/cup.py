@@ -59,11 +59,12 @@ def _table(cup: Cup, name: str, played: Sequence[MatchRecord]) -> list[int]:
 
 
 def screen_view(cup: Cup, before: int, manifest: Manifest) -> dict:
-    """The desk screen as it stands before match `before`, ducks billed with their players."""
+    """The desk screen as it stands before match `before`: the group tables by their players' handles, the
+    bracket, the next match and the champion billed with their players."""
     names = [duck(entrant) for entrant in cup.entrants]
     done, count = cup.matches[:before], len(cup.matches)
     groups = [{"name": name,
-               "rows": [{"name": names[i], "won": sum(m.winner == i for m in done if m.group == name),
+               "rows": [{"name": f"@{cup.entrants[i].user}", "won": sum(m.winner == i for m in done if m.group == name),
                          "played": sum(i in (m.a, m.b) for m in done if m.group == name)}
                         for i in _table(cup, name, done)]}
               for name, _ in zip(GROUP_NAMES, cup.groups)]

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { SCREEN_PX, screenLayout } from "./screen.js";
 
 // Views in the shape of the desk segment's `screen` (arena/commentary/cup.py
-// screen_view), which bills every duck "<policy> (@<user>)": short names stand
-// in for the ducks that fit.
+// screen_view), which names a group's rows by handle and bills every other duck
+// "<policy> (@<user>)": short names stand in for the ducks that fit.
 const [WIDTH, HEIGHT] = SCREEN_PX;
 const TITLE = "Tug of War · Cup #1";
 const row = (name, won, played) => ({ name, won, played });

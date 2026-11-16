@@ -3,7 +3,7 @@
 // slot underneath switches at 800 ms, while nothing shows through. On the way
 // out to a replay the panel carries the UP NEXT card, which is how the next
 // replay is announced: a run by its event and its player, a cup match by its
-// title.
+// title and its billing.
 
 import { wordmark } from "../wordmark.js";
 
@@ -48,11 +48,12 @@ export function createShutter(container) {
       const announce = destination && next;
       card.hidden = !announce;
       if (announce) {
-        // A cup match is announced by its title alone, which bills both its players, never by one of them.
+        // A cup match is announced by its title, over its billing once its pairing may be told (a
+        // replay of an aired cup), never by one of its players alone.
         const match = Boolean(next.title);
         event.textContent = match ? next.title : next.event;
-        user.hidden = match;
-        user.textContent = match ? "" : `@${next.user}`;
+        user.textContent = match ? next.billing ?? "" : `@${next.user}`;
+        user.hidden = !user.textContent;
       }
     },
     hide() {
