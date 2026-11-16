@@ -14,6 +14,7 @@ from ..cup import (
     MatchRecord,
     cup_times,
     cup_title,
+    duck,
     group_fixtures,
     group_table,
     parse_iso,
@@ -22,10 +23,6 @@ from ..manifest import Manifest, all_events
 from ..points import counting, receipts, standings
 from .context import NOTABLE_GAP_CM, Fact
 from .notable import season
-
-
-def duck(entrant: Entrant) -> str:
-    return f"{entrant.policy_name} (@{entrant.user})"
 
 
 def group_round(cup: Cup, match: MatchRecord) -> int:
@@ -62,11 +59,12 @@ def _table(cup: Cup, name: str, played: Sequence[MatchRecord]) -> list[int]:
 
 
 def screen_view(cup: Cup, before: int, manifest: Manifest) -> dict:
-    """The desk screen as it stands before match `before`, ducks by their on-air name."""
-    names = [entrant.name for entrant in cup.entrants]
+    """The desk screen as it stands before match `before`: the group tables by their players' handles, the
+    bracket, the next match and the champion billed with their players."""
+    names = [duck(entrant) for entrant in cup.entrants]
     done, count = cup.matches[:before], len(cup.matches)
     groups = [{"name": name,
-               "rows": [{"name": names[i], "won": sum(m.winner == i for m in done if m.group == name),
+               "rows": [{"name": f"@{cup.entrants[i].user}", "won": sum(m.winner == i for m in done if m.group == name),
                          "played": sum(i in (m.a, m.b) for m in done if m.group == name)}
                         for i in _table(cup, name, done)]}
               for name, _ in zip(GROUP_NAMES, cup.groups)]

@@ -31,14 +31,23 @@ describe("matchPlan", () => {
     expect([77, 78, 227, 231, 232, plan.frames - 1].map((i) => scoreAt(plan, match, i))).toEqual(
       [[0, 0], [1, 0], [1, 0], [1, 0], [1, 1], [1, 1]]);
   });
-  it("says who meets whom and who won", () => {
-    const match = { cup: 3, title: "Final · Tank vs Lean", event: { title: "Tug of War" },
-      a: { name: "Tank" }, b: { name: "Lean" }, winner: "a", wins: [2, 1] };
-    expect(matchWords(match)).toEqual({ title: "Tug of War · Cup #3", line: "Final · Tank vs Lean", outro: "Tank wins 2–1" });
+  it("says who meets whom, the players on the tape, and who won over its player's handle", () => {
+    const match = { cup: 3, round: "final", group: null, title: "Final · Tank (@ana) vs Lean (@bo)",
+      event: { title: "Tug of War" }, a: { name: "Tank", policy_name: "Tank", user: "ana" },
+      b: { name: "Lean", policy_name: "Lean", user: "bo" }, winner: "a", wins: [2, 1] };
+    expect(matchWords(match)).toEqual({ title: "Tug of War · Cup #3", line: "Final · Tank (@ana) vs Lean (@bo)",
+      players: "Final · @ana vs @bo", outro: "Tank wins 2–1", by: "@ana" });
   });
   it("says a tie went to the rating, not a score nobody won by", () => {
-    const match = { cup: 3, title: "Group A · Tank vs Lean", event: { title: "Tug of War" },
-      a: { name: "Tank" }, b: { name: "Lean" }, winner: "b", wins: [1, 1], decided_by: "rating" };
-    expect(matchWords(match).outro).toBe("Lean wins on rating");
+    const match = { cup: 3, round: "group", group: "A", title: "Group A · Tank (@ana) vs Lean (@bo)",
+      event: { title: "Tug of War" }, a: { name: "Tank", policy_name: "Tank", user: "ana" },
+      b: { name: "Lean", policy_name: "Lean", user: "bo" }, winner: "b", wins: [1, 1], decided_by: "rating" };
+    expect(matchWords(match)).toMatchObject({ players: "Group A · @ana vs @bo", outro: "Lean wins on rating", by: "@bo" });
+  });
+  it("stamps a winner whose name carries its handle, as two ducks of one name do, with the handle once", () => {
+    const match = { cup: 3, round: "semi-final", group: null, title: "Semi-final · v11 (@ana) vs v11 (@bo)",
+      event: { title: "Tug of War" }, a: { name: "v11 (@ana)", policy_name: "v11", user: "ana" },
+      b: { name: "v11 (@bo)", policy_name: "v11", user: "bo" }, winner: "b", wins: [0, 2] };
+    expect(matchWords(match)).toMatchObject({ players: "Semi-final · @ana vs @bo", outro: "v11 wins 2–0", by: "@bo" });
   });
 });

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { SCREEN_PX, screenLayout } from "./screen.js";
 
 // Views in the shape of the desk segment's `screen` (arena/commentary/cup.py
-// screen_view), every duck by its on-air name.
+// screen_view), which names a group's rows by handle and bills every other duck
+// "<policy> (@<user>)": short names stand in for the ducks that fit.
 const [WIDTH, HEIGHT] = SCREEN_PX;
 const TITLE = "Tug of War · Cup #1";
 const row = (name, won, played) => ({ name, won, played });
@@ -149,16 +150,14 @@ describe("screenLayout", () => {
     const groups = structuredClone(GROUPS);
     groups.groups[0].rows[0].name = long;
     const ops = screenLayout(groups, WIDTH, HEIGHT);
-    const name = texts(ops).find((op) => op.text.startsWith("a policy"));
-    expect(name.text.endsWith("…")).toBe(true);
+    const name = texts(ops).find((op) => op.text.includes("@and-on-and"));
     const won = texts(ops).find((op) => op.y === name.y && op.align === "right");
     expect(right(name)).toBeLessThanOrEqual(won.x - 0.55 * won.size * won.text.length);
 
     const bracket = structuredClone(BRACKET);
     bracket.knockout[1].matches[0].a = long;
     const lines = screenLayout(bracket, WIDTH, HEIGHT);
-    const side = texts(lines).find((op) => op.text.startsWith("a policy"));
-    expect(side.text.endsWith("…")).toBe(true);
+    const side = texts(lines).find((op) => op.text.includes("@and-on-and"));
     const panel = lines.find((op) => op.kind === "rect" && op.paint === "ink" && holds(op, side));
     expect(right(side)).toBeLessThanOrEqual(panel.x + panel.w);
   });
@@ -167,8 +166,24 @@ describe("screenLayout", () => {
     const long = "a policy name that runs on (@and-on-and)";
     const footer = (a, b) => texts(screenLayout({ ...GROUPS, next: { ...GROUPS.next, a, b } }, WIDTH, HEIGHT)).at(-1);
     expect(footer("puller 0", long).text).toBe(`NEXT  puller 0 vs ${long}`);
-    const both = footer(long, `${long}!`);
-    expect(both.text).toMatch(/^NEXT {2}a policy .*… vs a policy .*…$/);
+    const both = footer(long, "another policy that runs on (@and-on-on)");
+    expect(both.text).toBe("NEXT  a policy name… (@and-on-and) vs another policy… (@and-on-on)");
     expect(right(both)).toBeLessThanOrEqual(WIDTH - 40);
+  });
+
+  it("cuts a billed duck in its policy's name, its player's handle kept whole, or to its handle alone", () => {
+    const cell = (name) => {
+      const groups = structuredClone(GROUPS);
+      groups.groups[0].rows[0].name = name;
+      const all = words(screenLayout(groups, WIDTH, HEIGHT));
+      return all[all.indexOf("WON") + 1]; // Group A's first row
+    };
+    expect(cell("a policy name (@ab)")).toBe("a policy… (@ab)");
+    expect(cell("a policy name that runs on (@and-on-and)")).toBe("@and-on-and");
+    expect(cell("tug (@a-handle-that-runs-on-and-on)")).toBe("@a-handle-that…");
+    expect(cell("a policy name that runs on and on")).toBe("a policy name…");
+    const bracket = structuredClone(BRACKET);
+    bracket.knockout[1].matches[0].a = "a policy name that runs on (@and-on-and)";
+    expect(words(screenLayout(bracket, WIDTH, HEIGHT))).toContain("a policy name that runs… (@and-on-and)");
   });
 });

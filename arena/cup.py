@@ -202,8 +202,20 @@ def _stage(match: MatchRecord) -> str:
     return f"Group {match.group}" if match.group else match.round.capitalize()
 
 
+def duck(entrant: Entrant) -> str:
+    """A duck billed with its player, "<policy name> (@<user>)": from its policy's name, not its on-air `name`, which
+    on a clash carries the handle already."""
+    return f"{entrant.policy_name} (@{entrant.user})"
+
+
+def match_billing(cup: Cup, match: MatchRecord) -> str:
+    """Who meets whom, both ducks billed with their players."""
+    return f"{duck(cup.entrants[match.a])} vs {duck(cup.entrants[match.b])}"
+
+
 def match_title(cup: Cup, match: MatchRecord) -> str:
-    return f"{_stage(match)} · {cup.entrants[match.a].name} vs {cup.entrants[match.b].name}"
+    """The match as it is announced on air: its stage and its billing."""
+    return f"{_stage(match)} · {match_billing(cup, match)}"
 
 
 def match_label(cup: Cup, match: MatchRecord) -> str:

@@ -65,15 +65,17 @@ function letter(run) {
   stamp.classList.add(said.pass ? "stamp-pass" : "stamp-fail");
 }
 
-/** The words on a match's frame: the cup, who meets whom, and the winner on the stamp, centred. */
+/** The words on a match's frame: the cup, who meets whom, the players on the tape beside the bug's
+ * policies, and the winner on the stamp, centred, its player's handle under it. */
 function matchLetter(match) {
   const words = matchWords(match);
   for (const id of ["top-title", "intro-title"]) $(id).textContent = words.title;
   for (const id of ["top-participant", "intro-line"]) $(id).textContent = words.line;
-  $("osd-rec").textContent = `REC · ${words.line}`;
+  $("osd-rec").textContent = `REC · ${words.players}`;
   $("osd-event").textContent = words.title.toUpperCase();
   const stamp = $("stamp");
-  stamp.textContent = words.outro;
+  stamp.replaceChildren(words.outro,
+    Object.assign(document.createElement("span"), { className: "stamp-by", textContent: words.by }));
   stamp.classList.add("stamp-pass");
   Object.assign(stamp.style, { left: "50%", top: "45%" });
 }
